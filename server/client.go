@@ -11,6 +11,11 @@ import (
 	"golang.org/x/oauth2"
 )
 
+type ClientInterface interface {
+	CreateMeeting(creator *UserInfo, attendeesIDs []*UserInfo, subject string) (*msgraph.OnlineMeeting, error)
+	GetMe() (*msgraph.User, error)
+}
+
 // Client represents a MSGraph API client
 type Client struct {
 	builder *msgraph.GraphServiceRequestBuilder
@@ -18,7 +23,7 @@ type Client struct {
 }
 
 // NewClient returns a new MSGraph API client.
-func (p *Plugin) NewClient(conf *oauth2.Config, token *oauth2.Token) *Client {
+func (p *Plugin) NewClient(conf *oauth2.Config, token *oauth2.Token) ClientInterface {
 	ctx := context.Background()
 	httpClient := conf.Client(ctx, token)
 	return &Client{

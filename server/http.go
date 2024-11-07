@@ -134,7 +134,9 @@ func (p *Plugin) completeUserOAuth(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	remoteUser, err := p.getUserWithToken(tok)
+	p.client = p.NewClient(conf, tok)
+
+	remoteUser, err := p.getUserWithToken()
 	if err != nil {
 		p.API.LogDebug("complete oauth, error getting user", "error", err.Error())
 		http.Error(w, err.Error(), http.StatusInternalServerError)
