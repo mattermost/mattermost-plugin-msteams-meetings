@@ -77,7 +77,7 @@ func TestHandleConnect(t *testing.T) {
 			mockSetup: func(api *plugintest.API, encryptedUserInfo []byte, mockClient *MockClient) {
 				api.On("KVGet", "token_demoUserID").Return(encryptedUserInfo, nil)
 				api.On("KVSet", "msteamsmeetinguserstate_demoUserID", []byte("msteamsmeetinguserstate_demoUserID_demoChannelID_true")).Return(nil)
-				api.On("GetConfig").Return(&model.Config{ServiceSettings: model.ServiceSettings{SiteURL: model.NewString("https://example.com")}})
+				api.On("GetConfig").Return(&model.Config{ServiceSettings: model.ServiceSettings{SiteURL: model.NewPointer("https://example.com")}})
 				mockClient.On("GetMe").Return(&msgraph.User{}, errors.New("error getting user details"))
 			},
 			expectedOutput: "",
@@ -90,7 +90,7 @@ func TestHandleConnect(t *testing.T) {
 			commandArgs: &model.CommandArgs{UserId: "demoUserID", ChannelId: "demoChannelID"},
 			mockSetup: func(api *plugintest.API, encryptedUserInfo []byte, mockClient *MockClient) {
 				api.On("KVGet", "token_demoUserID").Return(encryptedUserInfo, nil)
-				api.On("GetConfig").Return(&model.Config{ServiceSettings: model.ServiceSettings{SiteURL: model.NewString("https://example.com")}})
+				api.On("GetConfig").Return(&model.Config{ServiceSettings: model.ServiceSettings{SiteURL: model.NewPointer("https://example.com")}})
 				mockClient.On("GetMe").Return(&msgraph.User{}, nil)
 			},
 			expectedOutput: "",
@@ -313,7 +313,7 @@ func TestHandleStart(t *testing.T) {
 				}
 				api.On("GetPostsSince", "demoChannelID", (time.Now().Unix()-30)*1000).Return(postList, nil)
 				api.On("KVGet", "token_demoUserID").Return(nil, &model.AppError{Message: "deletion error"})
-				api.On("GetConfig").Return(&model.Config{ServiceSettings: model.ServiceSettings{SiteURL: model.NewString("https://example.com")}})
+				api.On("GetConfig").Return(&model.Config{ServiceSettings: model.ServiceSettings{SiteURL: model.NewPointer("https://example.com")}})
 				api.On("KVSet", "msteamsmeetinguserstate_demoUserID", []byte("msteamsmeetinguserstate_demoUserID_demoChannelID_false")).Return(nil)
 			},
 			expectError:   true,
@@ -343,7 +343,7 @@ func TestHandleStart(t *testing.T) {
 
 				api.On("GetPostsSince", "demoChannelID", (time.Now().Unix()-30)*1000).Return(postList, nil)
 				api.On("KVGet", "token_demoUserID").Return(encryptedUserInfo, nil)
-				api.On("GetConfig").Return(&model.Config{ServiceSettings: model.ServiceSettings{SiteURL: model.NewString("https://example.com")}})
+				api.On("GetConfig").Return(&model.Config{ServiceSettings: model.ServiceSettings{SiteURL: model.NewPointer("https://example.com")}})
 				api.On("HasPermissionToChannel", "demoUserID", "demoChannelID", model.PermissionCreatePost).Return(true)
 				api.On("GetChannel", "demoChannelID").Return(&model.Channel{Id: "demoChannelID", Type: model.ChannelTypeOpen}, nil)
 				api.On("CreatePost", mock.Anything).Return(&model.Post{Id: "demoPostID"}, nil)
