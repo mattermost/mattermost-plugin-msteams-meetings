@@ -9,10 +9,6 @@ import (
 )
 
 func (p *Plugin) postMeeting(creator *model.User, channelID string, topic string) (*model.Post, *msgraph.OnlineMeeting, error) {
-	conf, err := p.getOAuthConfig()
-	if err != nil {
-		return nil, nil, err
-	}
 	userInfo, err := p.GetUserInfo(creator.Id)
 	if err != nil {
 		return nil, nil, err
@@ -48,9 +44,7 @@ func (p *Plugin) postMeeting(creator *model.User, channelID string, topic string
 		}
 	}
 
-	client := p.NewClient(conf, userInfo.OAuthToken)
-
-	meeting, err := client.CreateMeeting(userInfo, attendees, topic)
+	meeting, err := p.client.CreateMeeting(userInfo, attendees, topic)
 	if err != nil {
 		return nil, nil, err
 	}
