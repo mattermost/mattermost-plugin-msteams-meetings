@@ -12,6 +12,8 @@ import (
 	msgraph "github.com/yaegashi/msgraph.go/beta"
 )
 
+var mockPost = mock.AnythingOfType("*model.Post")
+
 func TestGetUserInfo(t *testing.T) {
 	p, api, client := SetupPluginMocks()
 
@@ -102,7 +104,7 @@ func TestGetUserInfo(t *testing.T) {
 				api.On("HasPermissionToChannel", "testUserID", "testChannelID", model.PermissionCreatePost).Return(true)
 				api.On("GetChannel", "testChannelID").Return(&model.Channel{Id: "testChannelID", Type: model.ChannelTypeDirect}, nil)
 				api.On("GetChannelMembers", "testChannelID", 0, 100).Return(model.ChannelMembers{}, nil)
-				api.On("CreatePost", mock.Anything).Return(nil, &model.AppError{Message: "error creating the post"})
+				api.On("CreatePost", mockPost).Return(nil, &model.AppError{Message: "error creating the post"})
 				client.On("CreateMeeting").Return(&msgraph.OnlineMeeting{JoinURL: model.NewString("testJoinURL")}, nil)
 			},
 		},
@@ -114,7 +116,7 @@ func TestGetUserInfo(t *testing.T) {
 				api.On("HasPermissionToChannel", "testUserID", "testChannelID", model.PermissionCreatePost).Return(true)
 				api.On("GetChannel", "testChannelID").Return(&model.Channel{Id: "testChannelID", Type: model.ChannelTypeDirect}, nil)
 				api.On("GetChannelMembers", "testChannelID", 0, 100).Return(model.ChannelMembers{}, nil)
-				api.On("CreatePost", mock.Anything).Return(&model.Post{}, nil)
+				api.On("CreatePost", mockPost).Return(&model.Post{}, nil)
 				client.On("CreateMeeting").Return(&msgraph.OnlineMeeting{JoinURL: model.NewString("testJoinURL")}, nil)
 			},
 		},
@@ -185,7 +187,7 @@ func TestPostConfirmCreateOrJoin(t *testing.T) {
 				},
 			}
 			api.ExpectedCalls = nil
-			api.On("SendEphemeralPost", userID, mock.AnythingOfType("*model.Post")).Return(expectedPost, nil)
+			api.On("SendEphemeralPost", userID, mockPost).Return(expectedPost, nil)
 
 			post := p.postConfirmCreateOrJoin(meetingURL, channelID, topic, userID, creatorName, tt.provider)
 			require.Equal(t, tt.expectedMessage, post.Message)
@@ -220,7 +222,7 @@ func TestPostConnect(t *testing.T) {
 			setup: func() {
 				testSiteURL := "testSiteURL"
 				api.On("GetConfig").Return(&model.Config{ServiceSettings: model.ServiceSettings{SiteURL: &testSiteURL}})
-				api.On("SendEphemeralPost", "testUserID", mock.AnythingOfType("*model.Post")).Return(&model.Post{}, nil)
+				api.On("SendEphemeralPost", "testUserID", mockPost).Return(&model.Post{}, nil)
 			},
 		},
 	}
