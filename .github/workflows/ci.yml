@@ -1,12 +1,17 @@
 name: ci
 on:
-  pull_request:
   push:
     branches:
       - master
-      - main
+  pull_request:
+
+permissions:
+  contents: read
 
 jobs:
   plugin-ci:
-    uses: mattermost/actions-workflows/.github/workflows/community-plugin-ci.yml@139a051e8651e6246e3764fe342297b73120e590
+    uses: mattermost/actions-workflows/.github/workflows/plugin-ci.yml@main
+    with:
+      golangci-lint-version: "v1.55.2"
+      golang-version: "1.22"
     secrets: inherit
