@@ -68,6 +68,7 @@ func TestHandleConnect(t *testing.T) {
 			mockSetup: func(_ *plugintest.API, _ []byte, _ *MockClient) {
 			},
 			expectedOutput: tooManyParametersText,
+			expectError:    false,
 		},
 		{
 			name:        "Error connecting user",
@@ -79,8 +80,9 @@ func TestHandleConnect(t *testing.T) {
 				api.On("GetConfig").Return(&model.Config{ServiceSettings: model.ServiceSettings{SiteURL: model.NewString("https://example.com")}})
 				mockClient.On("GetMe").Return(&msgraph.User{}, errors.New("error getting user details"))
 			},
-			expectError:   true,
-			expectedError: "error getting user details",
+			expectedOutput: "",
+			expectError:    true,
+			expectedError:  "error getting user details",
 		},
 		{
 			name:        "Successful connection",
@@ -91,15 +93,23 @@ func TestHandleConnect(t *testing.T) {
 				api.On("GetConfig").Return(&model.Config{ServiceSettings: model.ServiceSettings{SiteURL: model.NewString("https://example.com")}})
 				mockClient.On("GetMe").Return(&msgraph.User{}, nil)
 			},
+			expectedOutput: "",
+			expectError:    false,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mockAPI := &plugintest.API{}
+			api := &plugintest.API{}
 			mockClient := &MockClient{}
 
-			p := SetupMockPlugin(mockAPI, nil, mockClient)
+			p := &Plugin{
+				MattermostPlugin: plugin.MattermostPlugin{
+					API: api,
+				},
+				client: mockClient,
+			}
+
 			p.setConfiguration(&configuration{
 				EncryptionKey:      "demo_encrypt_key",
 				OAuth2ClientID:     "demo_oauth2_client_id",
@@ -117,7 +127,7 @@ func TestHandleConnect(t *testing.T) {
 			encryptedUserInfo, err := userInfo.EncryptedJSON([]byte("demo_encrypt_key"))
 			require.NoError(t, err)
 
-			tt.mockSetup(mockAPI, encryptedUserInfo, mockClient)
+			tt.mockSetup(api, encryptedUserInfo, mockClient)
 
 			resp, err := p.handleConnect(tt.args, tt.commandArgs)
 			if tt.expectError {
@@ -127,7 +137,7 @@ func TestHandleConnect(t *testing.T) {
 				require.Contains(t, resp, tt.expectedOutput)
 			}
 
-			mockAPI.AssertExpectations(t)
+			api.AssertExpectations(t)
 		})
 	}
 }
@@ -174,10 +184,16 @@ func TestHandleDisconnect(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mockAPI := &plugintest.API{}
+			api := &plugintest.API{}
 			mockTracker := &MockTracker{}
 
-			p := SetupMockPlugin(mockAPI, mockTracker, nil)
+			p := &Plugin{
+				MattermostPlugin: plugin.MattermostPlugin{
+					API: api,
+				},
+				tracker: mockTracker,
+			}
+
 			p.setConfiguration(&configuration{
 				EncryptionKey: "demo_encrypt_key",
 			})
@@ -192,13 +208,13 @@ func TestHandleDisconnect(t *testing.T) {
 			encryptedUserInfo, err := userInfo.EncryptedJSON([]byte("demo_encrypt_key"))
 			require.NoError(t, err)
 
-			tt.mockSetup(mockAPI, encryptedUserInfo, mockTracker)
+			tt.mockSetup(api, encryptedUserInfo, mockTracker)
 
 			resp, err := p.handleDisconnect(tt.args, tt.commandArgs)
 			require.NoError(t, err)
 			require.Contains(t, resp, tt.expectedOutput)
 
-			mockAPI.AssertExpectations(t)
+			api.AssertExpectations(t)
 			mockTracker.AssertExpectations(t)
 		})
 	}
@@ -274,6 +290,8 @@ func TestHandleStart(t *testing.T) {
 				api.On("SendEphemeralPost", "demoUserID", mock.Anything).Return(&model.Post{})
 				mockTracker.On("TrackUserEvent", mock.Anything, "demoUserID", mock.Anything).Return(nil)
 			},
+			expectError:    false,
+			expectedOutput: "",
 		},
 		{
 			name:        "Authentication error",
@@ -333,16 +351,24 @@ func TestHandleStart(t *testing.T) {
 				mockClient.On("CreateMeeting", mock.Anything, mock.Anything, mock.Anything).Return(&msgraph.OnlineMeeting{JoinURL: &joinURL}, nil)
 				mockTracker.On("TrackUserEvent", "meeting_started", "demoUserID", mock.Anything).Return(nil)
 			},
+			expectError: false,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mockAPI := &plugintest.API{}
+			api := &plugintest.API{}
 			mockTracker := &MockTracker{}
 			mockClient := &MockClient{}
 
-			p := SetupMockPlugin(mockAPI, mockTracker, mockClient)
+			p := &Plugin{
+				MattermostPlugin: plugin.MattermostPlugin{
+					API: api,
+				},
+				tracker: mockTracker,
+				client:  mockClient,
+			}
+
 			p.setConfiguration(&configuration{
 				EncryptionKey: "demo_encrypt_key",
 			})
@@ -357,7 +383,7 @@ func TestHandleStart(t *testing.T) {
 			encryptedUserInfo, err := userInfo.EncryptedJSON([]byte("demo_encrypt_key"))
 			require.NoError(t, err)
 
-			tt.mockSetup(mockAPI, encryptedUserInfo, mockTracker, mockClient)
+			tt.mockSetup(api, encryptedUserInfo, mockTracker, mockClient)
 
 			resp, err := p.handleStart(tt.args, tt.commandArgs)
 			if tt.expectError {
@@ -367,7 +393,7 @@ func TestHandleStart(t *testing.T) {
 				require.Contains(t, resp, tt.expectedOutput)
 			}
 
-			mockAPI.AssertExpectations(t)
+			api.AssertExpectations(t)
 			mockTracker.AssertExpectations(t)
 		})
 	}
