@@ -65,7 +65,7 @@ func (p *Plugin) connectUser(w http.ResponseWriter, r *http.Request) {
 
 	state, err := p.GetState(getOAuthUserStateKey(userID))
 	if err != nil {
-		p.API.LogError("connectUser, failed to store user state", "UserID", userID, "Error", err.Error())
+		p.API.LogError("connectUser, failed to get user state", "UserID", userID, "Error", err.Error())
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
