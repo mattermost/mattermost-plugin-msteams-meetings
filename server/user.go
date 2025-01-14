@@ -227,7 +227,7 @@ func (p *Plugin) resetAllOAuthTokens() {
 	p.API.LogInfo("OAuth2 configuration changed. Resetting all users' tokens, everyone will need to reconnect to MS Teams")
 	appErr := p.API.KVDeleteAll()
 	if appErr != nil {
-		p.API.LogError("failed to reset users' OAuth2 tokens", "error", appErr.Error())
+		p.API.LogError("failed to reset user's OAuth2 tokens", "error", appErr.Error())
 		return
 	}
 }

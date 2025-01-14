@@ -410,3 +410,52 @@ func TestGetHelpText(t *testing.T) {
 	actual := p.getHelpText()
 	require.Equal(t, expected, actual)
 }
+
+func TestExecuteCommand(t *testing.T) {
+	mockAPI := &plugintest.API{}
+	p := SetupMockPlugin(mockAPI, nil, nil)
+
+	var dummyPluginContext *plugin.Context
+
+	tests := []struct {
+		name        string
+		commandArgs *model.CommandArgs
+		expectedMsg string
+	}{
+		{
+			name: "Invalid Command",
+			commandArgs: &model.CommandArgs{
+				Command:   "/dummyCommand start",
+				ChannelId: "dummyChannelID",
+				UserId:    "dummyUserID",
+			},
+			expectedMsg: "Command '/dummyCommand' is not /mstmeetings. Please try again.",
+		},
+		{
+			name: "Successful execution of Help Command",
+			commandArgs: &model.CommandArgs{
+				Command:   "/mstmeetings help",
+				ChannelId: "dummyChannelID",
+				UserId:    "dummyUserID",
+			},
+			expectedMsg: "###### Mattermost MS Teams Meetings Plugin - Slash Command Help\n* `/mstmeetings start` - Start an MS Teams meeting. \n* `/mstmeetings connect` - Connect to MS Teams meeting. \n* `/mstmeetings disconnect` - Disconnect your Mattermost account from MS Teams. \n* `/mstmeetings help` - Display this help text.",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			post := &model.Post{
+				UserId:    p.botUserID,
+				ChannelId: tt.commandArgs.ChannelId,
+				Message:   tt.expectedMsg,
+			}
+
+			mockAPI.On("SendEphemeralPost", tt.commandArgs.UserId, post).Return(&model.Post{}).Once()
+
+			response, _ := p.ExecuteCommand(dummyPluginContext, tt.commandArgs)
+
+			require.Equal(t, &model.CommandResponse{}, response)
+			mockAPI.AssertExpectations(t)
+		})
+	}
+}
