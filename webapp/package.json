@@ -57,8 +57,6 @@
     "babel-loader": "8.1.0",
     "babel-plugin-typescript-to-proptypes": "1.4.1",
     "css-loader": "5.0.0",
-    "enzyme": "3.11.0",
-    "enzyme-adapter-react-16": "1.15.5",
     "enzyme-to-json": "3.6.1",
     "eslint": "7.11.0",
     "eslint-import-resolver-webpack": "0.13.0",
@@ -113,9 +111,6 @@
     ],
     "setupFiles": [
       "jest-canvas-mock"
-    ],
-    "setupFilesAfterEnv": [
-      "<rootDir>/tests/setup.js"
     ],
     "testURL": "http://localhost:8065"
   }
