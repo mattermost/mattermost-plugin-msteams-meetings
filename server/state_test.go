@@ -18,10 +18,7 @@ func TestStoreState(t *testing.T) {
 		name           string
 		userID         string
 		channelID      string
-		justConnect    bool<<<<<<< MM-822
-2
- 
-=======
+		justConnect    bool
 		returnError    error
 		expectError    bool
 		expectedState  string
