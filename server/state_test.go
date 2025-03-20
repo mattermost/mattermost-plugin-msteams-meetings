@@ -1,3 +1,6 @@
+// Copyright (c) 2020-present Mattermost, Inc. All Rights Reserved.
+// See LICENSE.txt for license information.
+
 package main
 
 import (
@@ -15,7 +18,10 @@ func TestStoreState(t *testing.T) {
 		name           string
 		userID         string
 		channelID      string
-		justConnect    bool
+		justConnect    bool<<<<<<< MM-822
+2
+ 
+=======
 		returnError    error
 		expectError    bool
 		expectedState  string
