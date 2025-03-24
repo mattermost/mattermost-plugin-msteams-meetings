@@ -31,7 +31,7 @@ func TestGetOauthMessage(t *testing.T) {
 			siteURL:     "",
 			setupFunc: func(p *Plugin) {
 				msg, err := p.getOauthMessage("mockChannelID")
-				require.EqualError(t, err, "error fetching siteUrl")
+				require.EqualError(t, err, "error fetching siteURL")
 				require.EqualValues(t, "", msg)
 			},
 		},

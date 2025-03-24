@@ -15,7 +15,7 @@ import (
 func (p *Plugin) getSiteURL() (string, error) {
 	siteURLRef := p.API.GetConfig().ServiceSettings.SiteURL
 	if siteURLRef == nil || *siteURLRef == "" {
-		return "", errors.New("error fetching siteUrl")
+		return "", errors.New("error fetching siteURL")
 	}
 
 	return *siteURLRef, nil
