@@ -1,7 +1,8 @@
 module github.com/mattermost/mattermost-plugin-msteams-meetings
 
-go 1.22
-toolchain go1.24.1
+go 1.23.0
+
+toolchain go1.23.7
 
 require (
 	github.com/mattermost/mattermost/server/public v0.1.9
