@@ -41,7 +41,7 @@ func TestGetOauthMessage(t *testing.T) {
 			api := &plugintest.API{}
 			api.On("GetConfig").Return(&model.Config{
 				ServiceSettings: model.ServiceSettings{
-					SiteURL: model.NewString(testCase.siteURL),
+					SiteURL: model.NewPointer(testCase.siteURL),
 				},
 			})
 
