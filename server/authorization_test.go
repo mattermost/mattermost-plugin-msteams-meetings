@@ -1,3 +1,6 @@
+// Copyright (c) 2020-present Mattermost, Inc. All Rights Reserved.
+// See LICENSE.txt for license information.
+
 package main
 
 import (
@@ -38,7 +41,7 @@ func TestGetOauthMessage(t *testing.T) {
 			api := &plugintest.API{}
 			api.On("GetConfig").Return(&model.Config{
 				ServiceSettings: model.ServiceSettings{
-					SiteURL: model.NewString(testCase.siteURL),
+					SiteURL: model.NewPointer(testCase.siteURL),
 				},
 			})
 
