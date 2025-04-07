@@ -25,6 +25,7 @@ func TestGetUserInfo(t *testing.T) {
 	})
 	key := []byte(p.getConfiguration().EncryptionKey)
 	encryptedUserInfo, err := info.EncryptedJSON(key)
+	mockJoinURL := "testJoinURL"
 	require.NoError(t, err)
 
 	tests := []struct {
@@ -105,7 +106,7 @@ func TestGetUserInfo(t *testing.T) {
 				api.On("GetChannel", "testChannelID").Return(&model.Channel{Id: "testChannelID", Type: model.ChannelTypeDirect}, nil)
 				api.On("GetChannelMembers", "testChannelID", 0, 100).Return(model.ChannelMembers{}, nil)
 				api.On("CreatePost", mockPost).Return(nil, &model.AppError{Message: "error creating the post"})
-				client.On("CreateMeeting").Return(&msgraph.OnlineMeeting{JoinURL: model.NewString("testJoinURL")}, nil)
+				client.On("CreateMeeting").Return(&msgraph.OnlineMeeting{JoinURL: &mockJoinURL}, nil)
 			},
 		},
 		{
@@ -117,7 +118,7 @@ func TestGetUserInfo(t *testing.T) {
 				api.On("GetChannel", "testChannelID").Return(&model.Channel{Id: "testChannelID", Type: model.ChannelTypeDirect}, nil)
 				api.On("GetChannelMembers", "testChannelID", 0, 100).Return(model.ChannelMembers{}, nil)
 				api.On("CreatePost", mockPost).Return(&model.Post{}, nil)
-				client.On("CreateMeeting").Return(&msgraph.OnlineMeeting{JoinURL: model.NewString("testJoinURL")}, nil)
+				client.On("CreateMeeting").Return(&msgraph.OnlineMeeting{JoinURL: &mockJoinURL}, nil)
 			},
 		},
 	}
