@@ -20,7 +20,7 @@ export function startMeeting(channelId: string, force = false, topic: string) {
             return {data: true};
         } catch (error) {
             let m : string;
-            if (error.message && error.message[0] === '{') {
+            if (error instanceof Error && error.message && error.message[0] === '{') {
                 const e = JSON.parse(error.message);
 
                 // Error is from MS API
@@ -29,8 +29,10 @@ export function startMeeting(channelId: string, force = false, topic: string) {
                 } else {
                     m = e;
                 }
-            } else {
+            } else if (error instanceof Error) {
                 m = error.message;
+            } else {
+                m = String(error);
             }
 
             const post = {
