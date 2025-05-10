@@ -25,14 +25,14 @@ func (p *Plugin) postMeeting(creator *model.User, channelID string, topic string
 
 	channel, appErr := p.API.GetChannel(channelID)
 	if appErr != nil {
-		return nil, nil, err
+		return nil, nil, appErr
 	}
 
 	if channel.IsGroupOrDirect() {
 		var members model.ChannelMembers
 		members, appErr = p.API.GetChannelMembers(channelID, 0, 100)
 		if appErr != nil {
-			return nil, nil, err
+			return nil, nil, appErr
 		}
 		if members == nil {
 			return nil, nil, errors.New("returned members is nil")
