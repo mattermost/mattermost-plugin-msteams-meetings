@@ -1,6 +1,6 @@
 module github.com/mattermost/mattermost-plugin-msteams-meetings
 
-go 1.23.0
+go 1.23
 
 toolchain go1.23.9
 
