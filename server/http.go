@@ -307,7 +307,7 @@ func (p *Plugin) handleStartMeeting(w http.ResponseWriter, r *http.Request) {
 		p.trackMeetingForced(userID)
 	}
 
-	_, err = w.Write([]byte(fmt.Sprintf(`{"meeting_url": "%s"}`, *meeting.JoinURL)))
+	_, err = fmt.Fprintf(w, `{"meeting_url": "%s"}`, *meeting.JoinURL)
 	if err != nil {
 		p.API.LogWarn("failed to write response", "error", err.Error())
 	}

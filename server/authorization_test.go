@@ -36,7 +36,7 @@ func TestGetOauthMessage(t *testing.T) {
 			},
 		},
 	} {
-		t.Run(testCase.description, func(t *testing.T) {
+		t.Run(testCase.description, func(_ *testing.T) {
 			p := &Plugin{}
 			api := &plugintest.API{}
 			api.On("GetConfig").Return(&model.Config{
