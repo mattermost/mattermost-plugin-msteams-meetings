@@ -11,8 +11,8 @@ permissions:
 
 jobs:
   plugin-ci:
-    uses: mattermost/actions-workflows/.github/workflows/plugin-ci.yml@7d90fb64170954e552f79c3145ebaa883da13a9f
+    uses: mattermost/actions-workflows/.github/workflows/plugin-ci.yml@main
     secrets: inherit
     with:
       golang-version: 1.23
-      golangci-lint-version: v2.1.1
+      golangci-lint-version: v2.1.6
