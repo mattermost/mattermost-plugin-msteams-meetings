@@ -5,8 +5,8 @@ import React from 'react';
 
 import {makeStyleFromTheme} from 'mattermost-redux/utils/theme_utils';
 import {ActionResult} from 'mattermost-redux/types/actions';
-import {Post} from 'mattermost-redux/types/posts';
-import {Theme} from 'mattermost-redux/types/preferences';
+import {Post} from '@mattermost/types/posts';
+import {Theme} from 'mattermost-redux/selectors/entities/preferences';
 
 import Icon from 'components/icon';
 

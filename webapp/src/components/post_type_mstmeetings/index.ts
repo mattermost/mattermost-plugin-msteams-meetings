@@ -4,12 +4,11 @@
 import {connect} from 'react-redux';
 import {ActionCreatorsMapObject, bindActionCreators, Dispatch} from 'redux';
 
-import {getBool} from 'mattermost-redux/selectors/entities/preferences';
+import {getBool, Theme} from 'mattermost-redux/selectors/entities/preferences';
 import {getCurrentChannelId} from 'mattermost-redux/selectors/entities/common';
 import {ActionResult} from 'mattermost-redux/types/actions';
-import {Post} from 'mattermost-redux/types/posts';
-import {GlobalState} from 'mattermost-redux/types/store';
-import {Theme} from 'mattermost-redux/types/preferences';
+import {Post} from '@mattermost/types/posts';
+import {GlobalState} from '@mattermost/types/store';
 
 import {startMeeting} from '../../actions';
 

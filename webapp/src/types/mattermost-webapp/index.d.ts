@@ -1,7 +1,7 @@
 // Copyright (c) 2020-present Mattermost, Inc. All Rights Reserved.
 // See LICENSE.txt for license information.
 
-import {Channel, ChannelMembership} from 'mattermost-redux/types/channels';
+import {Channel, ChannelMembership} from '@mattermost/types/channels';
 
 export interface PluginRegistry {
     registerChannelHeaderButtonAction(icon: React.ReactNode, callback: (channel: Channel) => void, text: string)
