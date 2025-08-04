@@ -29,8 +29,8 @@ type Actions = {
 function mapStateToProps(state: GlobalState, ownProps: OwnProps) {
     return {
         ...ownProps,
-        fromBot: ownProps.post.props.from_bot,
-        creatorName: ownProps.post.props.meeting_creator_username || 'Someone',
+        fromBot: ownProps.post.props.from_bot as boolean,
+        creatorName: ownProps.post.props.meeting_creator_username as string || 'Someone',
         useMilitaryTime: getBool(state, 'display_settings', 'use_military_time', false),
         currentChannelId: getCurrentChannelId(state),
     };
