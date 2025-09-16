@@ -5,8 +5,8 @@ import React from 'react';
 
 import {makeStyleFromTheme} from 'mattermost-redux/utils/theme_utils';
 import {ActionResult} from 'mattermost-redux/types/actions';
-import {Post} from 'mattermost-redux/types/posts';
-import {Theme} from 'mattermost-redux/types/preferences';
+import {Post} from '@mattermost/types/posts';
+import {Theme} from 'mattermost-redux/selectors/entities/preferences';
 
 import Icon from 'components/icon';
 
@@ -34,7 +34,7 @@ export default function PostTypeMSTMeetings(props: Props) {
     const handleForceStart = async () => {
         if (!creatingMeeting) {
             setCreatingMeeting(true);
-            await props.actions.startMeeting(props.currentChannelId, true, postProps.meeting_topic);
+            await props.actions.startMeeting(props.currentChannelId, true, postProps?.meeting_topic as string);
             setCreatingMeeting(false);
         }
     };
@@ -53,7 +53,7 @@ export default function PostTypeMSTMeetings(props: Props) {
                 style={style.button}
                 rel='noopener noreferrer'
                 target='_blank'
-                href={postProps.meeting_link}
+                href={postProps?.meeting_link as string}
             >
                 <i style={style.buttonIcon}>
                     <Icon/>
@@ -83,7 +83,7 @@ export default function PostTypeMSTMeetings(props: Props) {
                         style={style.button}
                         rel='noopener noreferrer'
                         target='_blank'
-                        href={postProps.meeting_link}
+                        href={postProps?.meeting_link as string}
                     >
                         <i style={style.buttonIcon}>
                             <Icon/>
@@ -96,8 +96,8 @@ export default function PostTypeMSTMeetings(props: Props) {
     }
 
     let title = 'MS Teams Meeting';
-    if (postProps.meeting_topic) {
-        title = postProps.meeting_topic;
+    if (postProps?.meeting_topic) {
+        title = postProps.meeting_topic as string;
     }
 
     return (
