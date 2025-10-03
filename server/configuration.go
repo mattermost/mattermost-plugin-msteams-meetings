@@ -7,8 +7,6 @@ import (
 	"encoding/json"
 	"reflect"
 
-	"github.com/mattermost/mattermost/server/public/pluginapi/experimental/bot/logger"
-	"github.com/mattermost/mattermost/server/public/pluginapi/experimental/telemetry"
 	"github.com/pkg/errors"
 )
 
@@ -145,8 +143,6 @@ func (p *Plugin) OnConfigurationChange() error {
 		// delete multiple times though.
 		go p.resetAllOAuthTokens()
 	}
-
-	p.tracker = telemetry.NewTracker(p.telemetryClient, p.API.GetDiagnosticId(), p.API.GetServerVersion(), manifest.Id, manifest.Version, "msteamsmeetings", telemetry.NewTrackerConfig(p.API.GetConfig()), logger.New(p.API))
 
 	return nil
 }

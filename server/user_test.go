@@ -71,7 +71,7 @@ func TestStoreUserInfo(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockAPI := &plugintest.API{}
-			p := SetupMockPlugin(mockAPI, nil, nil)
+			p := SetupMockPlugin(mockAPI, nil)
 			p.setConfiguration(&configuration{
 				EncryptionKey: "demo_encrypt_key",
 			})
@@ -117,7 +117,7 @@ func TestResetAllOAuthTokens(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockAPI := &plugintest.API{}
-			p := SetupMockPlugin(mockAPI, nil, nil)
+			p := SetupMockPlugin(mockAPI, nil)
 
 			mockAPI.On("LogInfo", "OAuth2 configuration changed. Resetting all users' tokens, everyone will need to reconnect to MS Teams").Return(nil)
 			mockAPI.On("KVDeleteAll").Return(tt.kvDeleteAllErr)

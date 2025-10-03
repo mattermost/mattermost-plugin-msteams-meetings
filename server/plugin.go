@@ -11,7 +11,6 @@ import (
 	"github.com/mattermost/mattermost/server/public/model"
 	"github.com/mattermost/mattermost/server/public/plugin"
 	"github.com/mattermost/mattermost/server/public/pluginapi"
-	"github.com/mattermost/mattermost/server/public/pluginapi/experimental/telemetry"
 	"github.com/pkg/errors"
 )
 
@@ -36,9 +35,6 @@ type Plugin struct {
 	// configuration is the active plugin configuration. Consult getConfiguration and
 	// setConfiguration for usage.
 	configuration *configuration
-
-	telemetryClient telemetry.Client
-	tracker         telemetry.Tracker
 }
 
 // OnActivate checks if the configurations is valid and ensures the bot account exists
@@ -82,21 +78,9 @@ func (p *Plugin) OnActivate() error {
 		return errors.Wrap(appErr, "couldn't set profile image")
 	}
 
-	p.telemetryClient, err = telemetry.NewRudderClient()
-	if err != nil {
-		p.API.LogWarn("telemetry client not started", "error", err.Error())
-	}
-
 	return nil
 }
 
 func (p *Plugin) OnDeactivate() error {
-	if p.telemetryClient != nil {
-		err := p.telemetryClient.Close()
-		if err != nil {
-			p.API.LogWarn("OnDeactivate: failed to close telemetryClient", "error", err.Error())
-		}
-	}
-
 	return nil
 }
