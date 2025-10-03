@@ -4,7 +4,6 @@
 package main
 
 import (
-	"bytes"
 	"context"
 	"crypto/aes"
 	"crypto/cipher"
@@ -119,7 +118,7 @@ func (p *Plugin) StoreUserInfo(info *UserInfo) error {
 func (p *Plugin) GetUserInfo(userID string) (*UserInfo, error) {
 	infoBytes, appErr := p.API.KVGet(tokenKey + userID)
 	if appErr != nil || infoBytes == nil {
-		return nil, errors.New("Your Mattermost account is not connected to any Microsoft Teams account") //nolint:golint
+		return nil, errors.New("Your Mattermost account is not connected to any Microsoft Teams account")
 	}
 
 	key := []byte(p.getConfiguration().EncryptionKey)
@@ -149,15 +148,17 @@ func encrypt(key, data []byte) (string, error) {
 		return "", errors.Wrap(err, "could not create a cipher block, check key")
 	}
 
-	data = pad(data)
-	ciphertext := make([]byte, aes.BlockSize+len(data))
-	iv := ciphertext[:aes.BlockSize]
-	if _, err := io.ReadFull(rand.Reader, iv); err != nil {
+	gcm, err := cipher.NewGCM(block)
+	if err != nil {
+		return "", errors.Wrap(err, "could not create GCM, check key")
+	}
+
+	nonce := make([]byte, gcm.NonceSize())
+	if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
 		return "", errors.Wrap(err, "readFull was unsuccessful, check buffer size")
 	}
 
-	cfb := cipher.NewCFBEncrypter(block, iv)
-	cfb.XORKeyStream(ciphertext[aes.BlockSize:], data)
+	ciphertext := gcm.Seal(nonce, nonce, data, nil)
 	finalMsg := base64.URLEncoding.EncodeToString(ciphertext)
 	return finalMsg, nil
 }
@@ -168,44 +169,28 @@ func decrypt(key []byte, text string) ([]byte, error) {
 		return nil, errors.Wrap(err, "could not create a cipher block, check key")
 	}
 
+	gcm, err := cipher.NewGCM(block)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not create GCM, check key")
+	}
+
 	decodedMsg, err := base64.URLEncoding.DecodeString(text)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not decode the message")
 	}
 
-	if (len(decodedMsg) % aes.BlockSize) != 0 {
-		return nil, errors.New("blocksize must be multiple of decoded message length")
+	nonceSize := gcm.NonceSize()
+	if len(decodedMsg) < nonceSize {
+		return nil, errors.New("ciphertext too short")
 	}
 
-	iv := decodedMsg[:aes.BlockSize]
-	msg := decodedMsg[aes.BlockSize:]
-
-	cfb := cipher.NewCFBDecrypter(block, iv)
-	cfb.XORKeyStream(msg, msg)
-
-	unpadMsg, err := unpad(msg)
+	nonce, ciphertext := decodedMsg[:nonceSize], decodedMsg[nonceSize:]
+	plaintext, err := gcm.Open(nil, nonce, ciphertext, nil)
 	if err != nil {
-		return nil, errors.Wrap(err, "unpad error, check key")
+		return nil, errors.Wrap(err, "decryption failed, check key")
 	}
 
-	return unpadMsg, nil
-}
-
-func pad(src []byte) []byte {
-	padding := aes.BlockSize - len(src)%aes.BlockSize
-	padtext := bytes.Repeat([]byte{byte(padding)}, padding)
-	return append(src, padtext...)
-}
-
-func unpad(src []byte) ([]byte, error) {
-	length := len(src)
-	unpadding := int(src[length-1])
-
-	if unpadding > length {
-		return nil, errors.New("unpad error. This could happen when incorrect encryption key is used")
-	}
-
-	return src[:(length - unpadding)], nil
+	return plaintext, nil
 }
 
 func generateSecret() (string, error) {
