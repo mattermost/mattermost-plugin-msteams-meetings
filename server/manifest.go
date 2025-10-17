@@ -9,5 +9,5 @@ import "github.com/mattermost/mattermost/server/public/model"
 
 var manifest = model.Manifest{
 	Id:      "com.mattermost.msteamsmeetings",
-	Version: "2.2.0",
+	Version: "2.3.0",
 }
