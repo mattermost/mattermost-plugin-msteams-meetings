@@ -176,8 +176,6 @@ func (p *Plugin) completeUserOAuth(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	p.trackConnect(userID)
-
 	html := `
 <!DOCTYPE html>
 <html>
@@ -270,7 +268,6 @@ func (p *Plugin) handleStartMeeting(w http.ResponseWriter, r *http.Request) {
 				p.API.LogWarn("failed to write response", "error", err.Error())
 			}
 			p.postConfirmCreateOrJoin(recentMeetingURL, req.ChannelID, req.Topic, userID, creatorName, provider)
-			p.trackMeetingDuplication(userID)
 			return
 		}
 	}
@@ -300,11 +297,6 @@ func (p *Plugin) handleStartMeeting(w http.ResponseWriter, r *http.Request) {
 		p.API.LogError("handleStartMeeting, failed to post meeting", "UserID", user.Id, "Error", err.Error())
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
-	}
-
-	p.trackMeetingStart(userID, telemetryStartSourceWebapp)
-	if r.URL.Query().Get("force") != "" {
-		p.trackMeetingForced(userID)
 	}
 
 	_, err = fmt.Fprintf(w, `{"meeting_url": "%s"}`, *meeting.JoinURL)
