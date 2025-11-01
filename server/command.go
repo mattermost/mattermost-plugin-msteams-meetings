@@ -130,7 +130,6 @@ func (p *Plugin) handleStart(args []string, extra *model.CommandArgs) (string, e
 
 	if recentMeeting {
 		p.postConfirmCreateOrJoin(recentMeetingURL, extra.ChannelId, topic, userID, creatorName, provider)
-		p.trackMeetingDuplication(extra.UserId)
 		return "", nil
 	}
 
@@ -149,7 +148,6 @@ func (p *Plugin) handleStart(args []string, extra *model.CommandArgs) (string, e
 		return "Failed to post message. Please try again.", errors.Wrap(err, "cannot post message")
 	}
 
-	p.trackMeetingStart(extra.UserId, telemetryStartSourceCommand)
 	return "", nil
 }
 
@@ -184,7 +182,6 @@ func (p *Plugin) handleDisconnect(args []string, extra *model.CommandArgs) (stri
 		return fmt.Sprintf("Failed to disconnect user, %s", err.Error()), nil
 	}
 
-	p.trackDisconnect(extra.UserId)
 	return "You have successfully disconnected from MS Teams Meetings.", nil
 }
 

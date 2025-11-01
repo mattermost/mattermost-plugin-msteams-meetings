@@ -44,7 +44,7 @@ func TestStoreState(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			mockAPI := &plugintest.API{}
-			p := SetupMockPlugin(mockAPI, nil, nil)
+			p := SetupMockPlugin(mockAPI, nil)
 
 			mockAPI.On("KVSet", getOAuthUserStateKey(tc.userID), mock.Anything).Return(tc.returnError)
 
@@ -91,7 +91,7 @@ func TestGetState(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			api := &plugintest.API{}
-			p := SetupMockPlugin(api, nil, nil)
+			p := SetupMockPlugin(api, nil)
 
 			api.On("KVGet", tc.key).Return(tc.getStateValue, tc.getStateError)
 
@@ -133,7 +133,7 @@ func TestDeleteState(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			mockAPI := &plugintest.API{}
-			p := SetupMockPlugin(mockAPI, nil, nil)
+			p := SetupMockPlugin(mockAPI, nil)
 
 			mockAPI.On("KVDelete", tc.key).Return(tc.returnError)
 
@@ -185,7 +185,7 @@ func TestParseState(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			mockAPI := &plugintest.API{}
-			p := SetupMockPlugin(mockAPI, nil, nil)
+			p := SetupMockPlugin(mockAPI, nil)
 
 			if tc.expectError {
 				mockAPI.On("LogDebug", "complete oauth, state mismatch", "stateComponents", mock.Anything, "state", tc.state).Return()
@@ -208,12 +208,11 @@ func TestParseState(t *testing.T) {
 	}
 }
 
-func SetupMockPlugin(mockAPI *plugintest.API, mockTracker *MockTracker, mockClient *MockClient) *Plugin {
+func SetupMockPlugin(mockAPI *plugintest.API, mockClient *MockClient) *Plugin {
 	return &Plugin{
 		MattermostPlugin: plugin.MattermostPlugin{
 			API: mockAPI,
 		},
-		tracker: mockTracker,
-		client:  mockClient,
+		client: mockClient,
 	}
 }
