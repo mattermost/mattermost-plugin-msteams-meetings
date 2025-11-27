@@ -1,22 +1,27 @@
-version: "2"
+version: 2
 
 run:
+  timeout: 5m
   modules-download-mode: readonly
 
-formatters:
-  enable:
-    - gofmt
-    - goimports
-
-  settings:
-    gofmt:
-      simplify: true
-    goimports:
-      local-prefixes:
-        - github.com/mattermost/mattermost-plugin-msteams-meetings
+linters-settings:
+  goconst:
+    min-len: 3
+    min-occurrences: 2
+  gofmt:
+    simplify: true
+  goimports:
+    local-prefixes: github.com/mattermost/mattermost-plugin-msteams-meetings
+  govet:
+    enable-all: true
+    disable:
+      - fieldalignment
+  misspell:
+    locale: US
+  revive:
 
 linters:
-  default: none
+  disable-all: true
   enable:
     - bodyclose
     - errcheck
@@ -31,28 +36,89 @@ linters:
     - unconvert
     - unused
     - whitespace
-
-  settings:
-    govet:
-      disable:
-        - fieldalignment
-      enable-all: true
-    misspell:
-      locale: US
-
   exclusions:
-    presets:
-      - comments
-      - common-false-positives
-      - legacy
-      - std-error-handling
     rules:
       - linters:
-          - unused
-        path: server/configuration.go
+          - revive
+        text: var-naming|error-naming|exported|increment-decrement|error-strings|if-return|unused-parameter|blank-imports|empty-block|package-comments
       - linters:
-          - bodyclose
-          - scopelint
-        path: _test\.go
+          - errcheck
+        text: Error return value
+      - linters:
+          - staticcheck
+        text: SA1019
+      - linters:
+          - staticcheck
+        text: ST1023
+      - linters:
+          - staticcheck
+        text: ST1012
+      - linters:
+          - staticcheck
+        text: ST1005
+      - linters:
+          - staticcheck
+        text: QF1011
+      - linters:
+          - staticcheck
+        text: QF1001
+      - linters:
+          - staticcheck
+        text: QF1003
+      - linters:
+          - staticcheck
+        text: QF1012
+      - linters:
+          - staticcheck
+        text: QT1019
+      - linters:
+          - staticcheck
+        text: QF1008
+      - linters:
+          - staticcheck
+        text: QF1004
+      - linters:
+          - staticcheck
+        text: ST1019
+      - linters:
+          - staticcheck
+        text: QF1006
+      - linters:
+          - staticcheck
+        text: QF1002
+      - linters:
+          - staticcheck
+        text: QF1007
+      - linters:
+          - gosec
+        text: G104
+      - linters:
+          - gosec
+        text: G304
+      - linters:
+          - gosec
+        text: G301
+
+formatters:
+  disable-all: true
+  enable:
+    - gofmt
+    - goimports
+
+issues:
+  exclude-rules:
+    - path: server/manifest.go
+      linters:
+        - deadcode
+        - unused
+        - varcheck
+    - path: server/configuration.go
+      linters:
+        - unused
+    - path: _test\.go
+      linters:
+        - bodyclose
+        - goconst
+        - scopelint # https://github.com/kyoh86/scopelint/issues/4
 
 
