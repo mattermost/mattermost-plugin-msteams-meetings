@@ -12,6 +12,7 @@ DEFAULT_GOOS := $(shell go env GOOS)
 DEFAULT_GOARCH := $(shell go env GOARCH)
 
 export GO111MODULE=on
+export GOTOOLCHAIN=go1.24.6
 
 # We need to export GOBIN to allow it to be set
 # for processes spawned from the Makefile
