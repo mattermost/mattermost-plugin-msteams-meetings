@@ -161,13 +161,11 @@ func TestConnectUser(t *testing.T) {
 
 func TestHandleStartMeeting(t *testing.T) {
 	api := &plugintest.API{}
-	tracker := &MockTracker{}
 	client := &MockClient{}
 	p := &Plugin{
 		MattermostPlugin: plugin.MattermostPlugin{
 			API: api,
 		},
-		tracker:   tracker,
 		botUserID: "botUserID",
 		client:    client,
 	}
@@ -349,7 +347,6 @@ func TestHandleStartMeeting(t *testing.T) {
 				api.On("HasPermissionToChannel", "testUserID", "testChannelID", model.PermissionCreatePost).Return(true)
 				client.On("GetMe").Return(&msgraph.User{}, nil)
 				client.On("CreateMeeting", mock.Anything, mock.Anything, mock.Anything).Return(&msgraph.OnlineMeeting{JoinURL: &testJoinURL}, nil)
-				tracker.On("TrackUserEvent", "meeting_started", "testUserID", mock.Anything).Return(nil)
 			},
 		},
 	}
@@ -388,7 +385,6 @@ func TestHandleStartMeeting(t *testing.T) {
 			require.Equal(t, tc.expectedBody, body)
 
 			api.AssertExpectations(t)
-			tracker.AssertExpectations(t)
 		})
 	}
 }
