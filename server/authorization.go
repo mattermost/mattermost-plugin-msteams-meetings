@@ -32,7 +32,7 @@ func (p *Plugin) getOauthMessage(channelID string) (string, error) {
 	return fmt.Sprintf("[Click here to link your Microsoft account.](%s/connect?channelID=%s)", pluginOauthURL, url.QueryEscape(channelID)), nil
 }
 
-func (p *Plugin) authenticateAndFetchUser(userID, channelID string) (*msgraph.User, *authError) {
+func (p *Plugin) authenticateAndFetchUserWithDeps(userID, channelID string, newClient ClientFactory) (*msgraph.User, *authError) {
 	var user *msgraph.User
 	var err error
 
@@ -47,12 +47,23 @@ func (p *Plugin) authenticateAndFetchUser(userID, channelID string) (*msgraph.Us
 		return nil, &authError{Message: oauthMsg, Err: apiErr}
 	}
 
-	user, err = p.getUserWithToken()
+	conf, err := p.getOAuthConfig()
+	if err != nil {
+		p.API.LogError("authenticateAndFetchUser, cannot get oauth config", "error", err.Error())
+		return nil, &authError{Message: "Error getting oauth config.", Err: err}
+	}
+
+	client := newClient(conf, userInfo.OAuthToken)
+	user, err = client.GetMe()
 	if err != nil {
 		return nil, &authError{Message: oauthMsg, Err: err}
 	}
 
 	return user, nil
+}
+
+func (p *Plugin) authenticateAndFetchUser(userID, channelID string) (*msgraph.User, *authError) {
+	return p.authenticateAndFetchUserWithDeps(userID, channelID, p.NewClient)
 }
 
 func (p *Plugin) disconnect(userID string) error {
@@ -83,13 +94,4 @@ func (p *Plugin) getOAuthConfig() (*oauth2.Config, error) {
 		},
 		Endpoint: microsoft.AzureADEndpoint(clientAuthority),
 	}, nil
-}
-
-func (p *Plugin) getUserWithToken() (*msgraph.User, error) {
-	user, err := p.client.GetMe()
-	if err != nil {
-		return nil, err
-	}
-
-	return user, nil
 }
