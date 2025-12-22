@@ -18,6 +18,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	msgraph "github.com/yaegashi/msgraph.go/beta"
+	"golang.org/x/oauth2"
 )
 
 func TestConnectUser(t *testing.T) {
@@ -162,14 +163,18 @@ func TestConnectUser(t *testing.T) {
 func TestHandleStartMeeting(t *testing.T) {
 	api := &plugintest.API{}
 	tracker := &MockTracker{}
-	client := &MockClient{}
+	mockClient := &MockClient{}
 	p := &Plugin{
 		MattermostPlugin: plugin.MattermostPlugin{
 			API: api,
 		},
 		tracker:   tracker,
 		botUserID: "botUserID",
-		client:    client,
+	}
+
+	// Create mock client factory
+	mockClientFactory := func(_ *oauth2.Config, _ *oauth2.Token) ClientInterface {
+		return mockClient
 	}
 
 	testCases := []struct {
@@ -275,7 +280,7 @@ func TestHandleStartMeeting(t *testing.T) {
 					ServiceSettings: model.ServiceSettings{
 						SiteURL: nil,
 					},
-				}).Times(1)
+				}).Times(2)
 				p.setConfiguration(&configuration{
 					EncryptionKey: "demo_encrypt_key",
 				})
@@ -286,9 +291,9 @@ func TestHandleStartMeeting(t *testing.T) {
 				api.On("GetUser", "testUserID").Return(&model.User{Id: "testUserID"}, nil)
 				api.On("GetChannelMember", "testChannelID", "testUserID").Return(nil, nil)
 				api.On("GetPostsSince", "testChannelID", (time.Now().Unix()-30)*1000).Return(&model.PostList{}, nil)
-				api.On("LogError", "postConnect, cannot get oauth message", "error", "error fetching siteURL")
+				api.On("LogError", "authenticateAndFetchUser, cannot get oauth config", "error", "error fetching siteURL").Return()
+				api.On("LogError", "postConnect, cannot get oauth message", "error", "error fetching siteURL").Return()
 				api.On("LogWarn", "failed to create connect post", "error", "error fetching siteURL")
-				client.On("GetMe").Return(&msgraph.User{}, &authError{Message: "error occurred in getting the msgraph user"})
 			},
 		},
 		{
@@ -316,7 +321,7 @@ func TestHandleStartMeeting(t *testing.T) {
 				api.On("GetPostsSince", "testChannelID", (time.Now().Unix()-30)*1000).Return(&model.PostList{}, nil)
 				api.On("LogError", "handleStartMeeting, failed to post meeting", "UserID", "testUserID", "Error", "cannot create post in this channel")
 				api.On("HasPermissionToChannel", "testUserID", "testChannelID", model.PermissionCreatePost).Return(false)
-				client.On("GetMe").Return(&msgraph.User{}, nil)
+				mockClient.On("GetMe").Return(&msgraph.User{}, nil)
 			},
 		},
 		{
@@ -347,8 +352,8 @@ func TestHandleStartMeeting(t *testing.T) {
 				api.On("GetPostsSince", "testChannelID", (time.Now().Unix()-30)*1000).Return(&model.PostList{}, nil)
 				api.On("CreatePost", mock.Anything).Return(&model.Post{}, nil)
 				api.On("HasPermissionToChannel", "testUserID", "testChannelID", model.PermissionCreatePost).Return(true)
-				client.On("GetMe").Return(&msgraph.User{}, nil)
-				client.On("CreateMeeting", mock.Anything, mock.Anything, mock.Anything).Return(&msgraph.OnlineMeeting{JoinURL: &testJoinURL}, nil)
+				mockClient.On("GetMe").Return(&msgraph.User{}, nil)
+				mockClient.On("CreateMeeting", mock.Anything, mock.Anything, mock.Anything).Return(&msgraph.OnlineMeeting{JoinURL: &testJoinURL}, nil)
 				tracker.On("TrackUserEvent", "meeting_started", "testUserID", mock.Anything).Return(nil)
 			},
 		},
@@ -357,7 +362,7 @@ func TestHandleStartMeeting(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			api.ExpectedCalls = nil
-			client.ExpectedCalls = nil
+			mockClient.ExpectedCalls = nil
 
 			tc.setup()
 
@@ -379,7 +384,7 @@ func TestHandleStartMeeting(t *testing.T) {
 			}
 			w := httptest.NewRecorder()
 
-			p.handleStartMeeting(w, req)
+			p.handleStartMeetingWithDeps(w, req, mockClientFactory)
 
 			resp := w.Result()
 			body := w.Body.String()
@@ -395,12 +400,10 @@ func TestHandleStartMeeting(t *testing.T) {
 
 func TestCompleteUserOAuth(t *testing.T) {
 	api := &plugintest.API{}
-	client := &MockClient{}
 	p := &Plugin{
 		MattermostPlugin: plugin.MattermostPlugin{
 			API: api,
 		},
-		client: client,
 	}
 
 	tests := []struct {

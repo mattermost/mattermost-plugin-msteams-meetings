@@ -11,7 +11,7 @@ import (
 	msgraph "github.com/yaegashi/msgraph.go/beta"
 )
 
-func (p *Plugin) postMeeting(creator *model.User, channelID string, topic string) (*model.Post, *msgraph.OnlineMeeting, error) {
+func (p *Plugin) postMeetingWithDeps(creator *model.User, channelID string, topic string, newClient ClientFactory) (*model.Post, *msgraph.OnlineMeeting, error) {
 	userInfo, err := p.GetUserInfo(creator.Id)
 	if err != nil {
 		return nil, nil, err
@@ -47,7 +47,13 @@ func (p *Plugin) postMeeting(creator *model.User, channelID string, topic string
 		}
 	}
 
-	meeting, err := p.client.CreateMeeting(userInfo, attendees, topic)
+	conf, err := p.getOAuthConfig()
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "failed to get OAuth config")
+	}
+
+	client := newClient(conf, userInfo.OAuthToken)
+	meeting, err := client.CreateMeeting(userInfo, attendees, topic)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -73,6 +79,10 @@ func (p *Plugin) postMeeting(creator *model.User, channelID string, topic string
 	}
 
 	return post, meeting, nil
+}
+
+func (p *Plugin) postMeeting(creator *model.User, channelID string, topic string) (*model.Post, *msgraph.OnlineMeeting, error) {
+	return p.postMeetingWithDeps(creator, channelID, topic, p.NewClient)
 }
 
 func (p *Plugin) postConfirmCreateOrJoin(meetingURL string, channelID string, topic string, userID string, creatorName string, provider string) *model.Post {

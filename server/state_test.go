@@ -214,6 +214,5 @@ func SetupMockPlugin(mockAPI *plugintest.API, mockTracker *MockTracker, mockClie
 			API: mockAPI,
 		},
 		tracker: mockTracker,
-		client:  mockClient,
 	}
 }

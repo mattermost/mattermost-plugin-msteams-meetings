@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	msgraph "github.com/yaegashi/msgraph.go/beta"
+	"golang.org/x/oauth2"
 )
 
 var mockPost = mock.AnythingOfType("*model.Post")
@@ -91,6 +92,8 @@ func TestGetUserInfo(t *testing.T) {
 			creator:       &model.User{Id: "testUserID"},
 			expectedError: "error creating the meeting",
 			setup: func() {
+				siteURL := "testSiteURL"
+				api.On("GetConfig").Return(&model.Config{ServiceSettings: model.ServiceSettings{SiteURL: &siteURL}})
 				api.On("KVGet", tokenKey+"testUserID").Return(encryptedUserInfo, nil).Once()
 				api.On("HasPermissionToChannel", "testUserID", "testChannelID", model.PermissionCreatePost).Return(true)
 				api.On("GetChannel", "testChannelID").Return(&model.Channel{Id: "testChannelID", Type: model.ChannelTypeDirect}, nil)
@@ -103,6 +106,8 @@ func TestGetUserInfo(t *testing.T) {
 			creator:       &model.User{Id: "testUserID", Username: "testUsername"},
 			expectedError: "error creating the post",
 			setup: func() {
+				siteURL := "testSiteURL"
+				api.On("GetConfig").Return(&model.Config{ServiceSettings: model.ServiceSettings{SiteURL: &siteURL}})
 				require.NoError(t, err)
 				api.On("KVGet", tokenKey+"testUserID").Return(encryptedUserInfo, nil).Once()
 				api.On("HasPermissionToChannel", "testUserID", "testChannelID", model.PermissionCreatePost).Return(true)
@@ -116,6 +121,8 @@ func TestGetUserInfo(t *testing.T) {
 			name:    "Meeting posted successfully",
 			creator: &model.User{Id: "testUserID", Username: "testUsername"},
 			setup: func() {
+				siteURL := "testSiteURL"
+				api.On("GetConfig").Return(&model.Config{ServiceSettings: model.ServiceSettings{SiteURL: &siteURL}})
 				api.On("KVGet", tokenKey+"testUserID").Return(encryptedUserInfo, nil).Once()
 				api.On("HasPermissionToChannel", "testUserID", "testChannelID", model.PermissionCreatePost).Return(true)
 				api.On("GetChannel", "testChannelID").Return(&model.Channel{Id: "testChannelID", Type: model.ChannelTypeDirect}, nil)
@@ -126,6 +133,11 @@ func TestGetUserInfo(t *testing.T) {
 		},
 	}
 
+	// Create mock client factory
+	mockClientFactory := func(_ *oauth2.Config, _ *oauth2.Token) ClientInterface {
+		return client
+	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			api.ExpectedCalls = nil
@@ -133,7 +145,7 @@ func TestGetUserInfo(t *testing.T) {
 
 			tt.setup()
 
-			_, _, err := p.postMeeting(tt.creator, "testChannelID", "testTopic")
+			_, _, err := p.postMeetingWithDeps(tt.creator, "testChannelID", "testTopic", mockClientFactory)
 
 			if tt.expectedError != "" {
 				require.Error(t, err)
@@ -257,7 +269,6 @@ func SetupPluginMocks() (*Plugin, *plugintest.API, *MockClient) {
 		MattermostPlugin: plugin.MattermostPlugin{
 			API: api,
 		},
-		client: client,
 	}
 
 	return p, api, client

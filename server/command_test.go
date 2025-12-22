@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	msgraph "github.com/yaegashi/msgraph.go/beta"
+	"golang.org/x/oauth2"
 
 	"github.com/mattermost/mattermost/server/public/model"
 	"github.com/mattermost/mattermost/server/public/plugin"
@@ -52,6 +53,13 @@ func (m *MockClient) GetMe() (*msgraph.User, error) {
 func (m *MockClient) CreateMeeting(_ *UserInfo, _ []*UserInfo, _ string) (*msgraph.OnlineMeeting, error) {
 	args := m.Called()
 	return args.Get(0).(*msgraph.OnlineMeeting), args.Error(1)
+}
+
+// mockClientFactory returns a ClientFactory that always returns the given mock client
+func mockClientFactory(mockClient *MockClient) ClientFactory {
+	return func(_ *oauth2.Config, _ *oauth2.Token) ClientInterface {
+		return mockClient
+	}
 }
 
 func TestHandleConnect(t *testing.T) {
@@ -110,7 +118,6 @@ func TestHandleConnect(t *testing.T) {
 				MattermostPlugin: plugin.MattermostPlugin{
 					API: api,
 				},
-				client: mockClient,
 			}
 
 			p.setConfiguration(&configuration{
@@ -132,7 +139,7 @@ func TestHandleConnect(t *testing.T) {
 
 			tt.mockSetup(api, encryptedUserInfo, mockClient)
 
-			resp, err := p.handleConnect(tt.args, tt.commandArgs)
+			resp, err := p.handleConnectWithDeps(tt.args, tt.commandArgs, mockClientFactory(mockClient))
 			if tt.expectError {
 				require.ErrorContains(t, err, tt.expectedError)
 			} else {
@@ -141,6 +148,7 @@ func TestHandleConnect(t *testing.T) {
 			}
 
 			api.AssertExpectations(t)
+			mockClient.AssertExpectations(t)
 		})
 	}
 }
@@ -369,7 +377,6 @@ func TestHandleStart(t *testing.T) {
 					API: api,
 				},
 				tracker: mockTracker,
-				client:  mockClient,
 			}
 
 			p.setConfiguration(&configuration{
@@ -388,7 +395,7 @@ func TestHandleStart(t *testing.T) {
 
 			tt.mockSetup(api, encryptedUserInfo, mockTracker, mockClient)
 
-			resp, err := p.handleStart(tt.args, tt.commandArgs)
+			resp, err := p.handleStartWithDeps(tt.args, tt.commandArgs, mockClientFactory(mockClient))
 			if tt.expectError {
 				require.ErrorContains(t, err, tt.expectedError)
 			} else {
@@ -398,6 +405,7 @@ func TestHandleStart(t *testing.T) {
 
 			api.AssertExpectations(t)
 			mockTracker.AssertExpectations(t)
+			mockClient.AssertExpectations(t)
 		})
 	}
 }

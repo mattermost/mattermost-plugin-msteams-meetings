@@ -28,8 +28,6 @@ type Plugin struct {
 	// botUserID of the created bot account.
 	botUserID string
 
-	client ClientInterface
-
 	// configurationLock synchronizes access to the configuration.
 	configurationLock sync.RWMutex
 
