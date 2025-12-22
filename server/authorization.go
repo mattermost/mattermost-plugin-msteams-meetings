@@ -62,10 +62,6 @@ func (p *Plugin) authenticateAndFetchUserWithDeps(userID, channelID string, newC
 	return user, nil
 }
 
-func (p *Plugin) authenticateAndFetchUser(userID, channelID string) (*msgraph.User, *authError) {
-	return p.authenticateAndFetchUserWithDeps(userID, channelID, p.NewClient)
-}
-
 func (p *Plugin) disconnect(userID string) error {
 	return p.RemoveUser(userID)
 }
