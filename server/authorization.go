@@ -32,34 +32,34 @@ func (p *Plugin) getOauthMessage(channelID string) (string, error) {
 	return fmt.Sprintf("[Click here to link your Microsoft account.](%s/connect?channelID=%s)", pluginOauthURL, url.QueryEscape(channelID)), nil
 }
 
-func (p *Plugin) authenticateAndFetchUserWithDeps(userID, channelID string, newClient ClientFactory) (*msgraph.User, *authError) {
+func (p *Plugin) authenticateAndFetchUser(userID, channelID string, newClient ClientFactory) (*msgraph.User, *UserInfo, ClientInterface, *authError) {
 	var user *msgraph.User
 	var err error
 
 	oauthMsg, err := p.getOauthMessage(channelID)
 	if err != nil {
 		p.API.LogError("authenticateAndFetchUser, cannot get oauth message", "error", err.Error())
-		return nil, &authError{Message: "Error getting oauth messsage.", Err: err}
+		return nil, nil, nil, &authError{Message: "Error getting oauth messsage.", Err: err}
 	}
 
 	userInfo, apiErr := p.GetUserInfo(userID)
 	if apiErr != nil || userInfo == nil {
-		return nil, &authError{Message: oauthMsg, Err: apiErr}
+		return nil, nil, nil, &authError{Message: oauthMsg, Err: apiErr}
 	}
 
 	conf, err := p.getOAuthConfig()
 	if err != nil {
 		p.API.LogError("authenticateAndFetchUser, cannot get oauth config", "error", err.Error())
-		return nil, &authError{Message: "Error getting oauth config.", Err: err}
+		return nil, nil, nil, &authError{Message: "Error getting oauth config.", Err: err}
 	}
 
 	client := newClient(conf, userInfo.OAuthToken)
 	user, err = client.GetMe()
 	if err != nil {
-		return nil, &authError{Message: oauthMsg, Err: err}
+		return nil, nil, nil, &authError{Message: oauthMsg, Err: err}
 	}
 
-	return user, nil
+	return user, userInfo, client, nil
 }
 
 func (p *Plugin) disconnect(userID string) error {

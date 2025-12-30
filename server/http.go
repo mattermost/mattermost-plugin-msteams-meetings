@@ -207,7 +207,7 @@ func (p *Plugin) completeUserOAuth(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		_, _, err = p.postMeeting(user, channelID, "")
+		_, _, err = p.postMeetingWithDeps(user, channelID, "", client, userInfo)
 		if err != nil {
 			p.API.LogDebug("complete oauth, error posting meeting", "error", err.Error())
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -275,7 +275,7 @@ func (p *Plugin) handleStartMeetingWithDeps(w http.ResponseWriter, r *http.Reque
 		}
 	}
 
-	_, authErr := p.authenticateAndFetchUserWithDeps(userID, req.ChannelID, newClient)
+	_, userInfo, client, authErr := p.authenticateAndFetchUser(userID, req.ChannelID, newClient)
 	if authErr != nil {
 		if _, err = w.Write([]byte(`{"meeting_url": ""}`)); err != nil {
 			p.API.LogWarn("failed to write response", "error", err.Error())
@@ -295,7 +295,7 @@ func (p *Plugin) handleStartMeetingWithDeps(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	_, meeting, err := p.postMeetingWithDeps(user, req.ChannelID, req.Topic, newClient)
+	_, meeting, err := p.postMeetingWithDeps(user, req.ChannelID, req.Topic, client, userInfo)
 	if err != nil {
 		p.API.LogError("handleStartMeeting, failed to post meeting", "UserID", user.Id, "Error", err.Error())
 		http.Error(w, err.Error(), http.StatusInternalServerError)
