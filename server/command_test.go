@@ -90,6 +90,7 @@ func TestHandleConnect(t *testing.T) {
 				api.On("KVSet", "msteamsmeetinguserstate_demoUserID", []byte("msteamsmeetinguserstate_demoUserID_demoChannelID_true")).Return(nil)
 				api.On("GetConfig").Return(&model.Config{ServiceSettings: model.ServiceSettings{SiteURL: model.NewPointer("https://example.com")}})
 				mockClient.On("GetMe").Return(&msgraph.User{}, errors.New("error getting user details"))
+				api.On("LogError", "authenticateAndFetchUser, cannot get user", "error", "error getting user details").Return()
 			},
 			expectedOutput: "",
 			expectError:    true,
