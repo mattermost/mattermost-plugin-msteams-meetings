@@ -18,6 +18,12 @@ type authError struct {
 	Err     error  `json:"err"`
 }
 
+type AuthResult struct {
+	User     *msgraph.User
+	UserInfo *UserInfo
+	Client   ClientInterface
+}
+
 func (ae *authError) Error() string {
 	errorString, _ := json.Marshal(ae)
 	return string(errorString)
@@ -32,34 +38,36 @@ func (p *Plugin) getOauthMessage(channelID string) (string, error) {
 	return fmt.Sprintf("[Click here to link your Microsoft account.](%s/connect?channelID=%s)", pluginOauthURL, url.QueryEscape(channelID)), nil
 }
 
-func (p *Plugin) authenticateAndFetchUser(userID, channelID string, newClient ClientFactory) (*msgraph.User, *UserInfo, ClientInterface, *authError) {
-	var user *msgraph.User
-	var err error
-
+func (p *Plugin) authenticateAndFetchUser(userID, channelID string, newClient ClientFactory) (*AuthResult, *authError) {
 	oauthMsg, err := p.getOauthMessage(channelID)
 	if err != nil {
 		p.API.LogError("authenticateAndFetchUser, cannot get oauth message", "error", err.Error())
-		return nil, nil, nil, &authError{Message: "Error getting oauth messsage.", Err: err}
+		return nil, &authError{Message: "Error getting oauth messsage.", Err: err}
 	}
 
 	userInfo, apiErr := p.GetUserInfo(userID)
 	if apiErr != nil || userInfo == nil {
-		return nil, nil, nil, &authError{Message: oauthMsg, Err: apiErr}
+		return nil, &authError{Message: oauthMsg, Err: apiErr}
 	}
 
 	conf, err := p.getOAuthConfig()
 	if err != nil {
 		p.API.LogError("authenticateAndFetchUser, cannot get oauth config", "error", err.Error())
-		return nil, nil, nil, &authError{Message: "Error getting oauth config.", Err: err}
+		return nil, &authError{Message: "Error getting oauth config.", Err: err}
 	}
 
 	client := newClient(conf, userInfo.OAuthToken)
-	user, err = client.GetMe()
+	user, err := client.GetMe()
 	if err != nil {
-		return nil, nil, nil, &authError{Message: oauthMsg, Err: err}
+		p.API.LogError("authenticateAndFetchUser, cannot get user", "error", err.Error())
+		return nil, &authError{Message: oauthMsg, Err: err}
 	}
 
-	return user, userInfo, client, nil
+	return &AuthResult{
+		User:     user,
+		UserInfo: userInfo,
+		Client:   client,
+	}, nil
 }
 
 func (p *Plugin) disconnect(userID string) error {

@@ -275,7 +275,7 @@ func (p *Plugin) handleStartMeetingWithDeps(w http.ResponseWriter, r *http.Reque
 		}
 	}
 
-	_, userInfo, client, authErr := p.authenticateAndFetchUser(userID, req.ChannelID, newClient)
+	authResult, authErr := p.authenticateAndFetchUser(userID, req.ChannelID, newClient)
 	if authErr != nil {
 		if _, err = w.Write([]byte(`{"meeting_url": ""}`)); err != nil {
 			p.API.LogWarn("failed to write response", "error", err.Error())
@@ -295,7 +295,7 @@ func (p *Plugin) handleStartMeetingWithDeps(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	_, meeting, err := p.postMeetingWithDeps(user, req.ChannelID, req.Topic, client, userInfo)
+	_, meeting, err := p.postMeetingWithDeps(user, req.ChannelID, req.Topic, authResult.Client, authResult.UserInfo)
 	if err != nil {
 		p.API.LogError("handleStartMeeting, failed to post meeting", "UserID", user.Id, "Error", err.Error())
 		http.Error(w, err.Error(), http.StatusInternalServerError)

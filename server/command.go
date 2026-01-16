@@ -134,7 +134,7 @@ func (p *Plugin) handleStartWithDeps(args []string, extra *model.CommandArgs, ne
 		return "", nil
 	}
 
-	_, userInfo, client, authErr := p.authenticateAndFetchUser(userID, extra.ChannelId, newClient)
+	authResult, authErr := p.authenticateAndFetchUser(userID, extra.ChannelId, newClient)
 	if authErr != nil {
 		// the user state will be needed later while connecting the user to MS teams meeting via OAuth
 		if _, err := p.StoreState(userID, extra.ChannelId, false); err != nil {
@@ -144,7 +144,7 @@ func (p *Plugin) handleStartWithDeps(args []string, extra *model.CommandArgs, ne
 		return authErr.Message, authErr.Err
 	}
 
-	_, _, err := p.postMeetingWithDeps(user, extra.ChannelId, topic, client, userInfo)
+	_, _, err := p.postMeetingWithDeps(user, extra.ChannelId, topic, authResult.Client, authResult.UserInfo)
 	if err != nil {
 		return "Failed to post message. Please try again.", errors.Wrap(err, "cannot post message")
 	}
@@ -162,7 +162,7 @@ func (p *Plugin) handleConnectWithDeps(args []string, extra *model.CommandArgs, 
 		return tooManyParametersText, nil
 	}
 
-	msUser, _, _, authErr := p.authenticateAndFetchUser(extra.UserId, extra.ChannelId, newClient)
+	authResult, authErr := p.authenticateAndFetchUser(extra.UserId, extra.ChannelId, newClient)
 	if authErr != nil {
 		// the user state will be needed later while connecting the user to MS teams meeting via OAuth
 		if _, err := p.StoreState(extra.UserId, extra.ChannelId, true); err != nil {
@@ -172,7 +172,7 @@ func (p *Plugin) handleConnectWithDeps(args []string, extra *model.CommandArgs, 
 		return authErr.Message, authErr.Err
 	}
 
-	if msUser != nil {
+	if authResult.User != nil {
 		return "User already connected to MS Teams Meetings", nil
 	}
 
