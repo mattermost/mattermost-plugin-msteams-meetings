@@ -18,6 +18,12 @@ type authError struct {
 	Err     error  `json:"err"`
 }
 
+type AuthResult struct {
+	User     *msgraph.User
+	UserInfo *UserInfo
+	Client   ClientInterface
+}
+
 func (ae *authError) Error() string {
 	errorString, _ := json.Marshal(ae)
 	return string(errorString)
@@ -32,10 +38,7 @@ func (p *Plugin) getOauthMessage(channelID string) (string, error) {
 	return fmt.Sprintf("[Click here to link your Microsoft account.](%s/connect?channelID=%s)", pluginOauthURL, url.QueryEscape(channelID)), nil
 }
 
-func (p *Plugin) authenticateAndFetchUser(userID, channelID string) (*msgraph.User, *authError) {
-	var user *msgraph.User
-	var err error
-
+func (p *Plugin) authenticateAndFetchUser(userID, channelID string, newClient ClientFactory) (*AuthResult, *authError) {
 	oauthMsg, err := p.getOauthMessage(channelID)
 	if err != nil {
 		p.API.LogError("authenticateAndFetchUser, cannot get oauth message", "error", err.Error())
@@ -47,12 +50,24 @@ func (p *Plugin) authenticateAndFetchUser(userID, channelID string) (*msgraph.Us
 		return nil, &authError{Message: oauthMsg, Err: apiErr}
 	}
 
-	user, err = p.getUserWithToken()
+	conf, err := p.getOAuthConfig()
 	if err != nil {
+		p.API.LogError("authenticateAndFetchUser, cannot get oauth config", "error", err.Error())
+		return nil, &authError{Message: "Error getting oauth config.", Err: err}
+	}
+
+	client := newClient(conf, userInfo.OAuthToken)
+	user, err := client.GetMe()
+	if err != nil {
+		p.API.LogError("authenticateAndFetchUser, cannot get user", "error", err.Error())
 		return nil, &authError{Message: oauthMsg, Err: err}
 	}
 
-	return user, nil
+	return &AuthResult{
+		User:     user,
+		UserInfo: userInfo,
+		Client:   client,
+	}, nil
 }
 
 func (p *Plugin) disconnect(userID string) error {
@@ -83,13 +98,4 @@ func (p *Plugin) getOAuthConfig() (*oauth2.Config, error) {
 		},
 		Endpoint: microsoft.AzureADEndpoint(clientAuthority),
 	}, nil
-}
-
-func (p *Plugin) getUserWithToken() (*msgraph.User, error) {
-	user, err := p.client.GetMe()
-	if err != nil {
-		return nil, err
-	}
-
-	return user, nil
 }

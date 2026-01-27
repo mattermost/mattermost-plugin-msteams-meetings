@@ -134,9 +134,9 @@ func (p *Plugin) completeUserOAuth(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	p.client = p.NewClient(conf, tok)
+	client := p.NewClient(conf, tok)
 
-	remoteUser, err := p.getUserWithToken()
+	remoteUser, err := client.GetMe()
 	if err != nil {
 		p.API.LogDebug("complete oauth, error getting user", "error", err.Error())
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -207,7 +207,7 @@ func (p *Plugin) completeUserOAuth(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		_, _, err = p.postMeeting(user, channelID, "")
+		_, _, err = p.postMeetingWithDeps(user, channelID, "", client, userInfo)
 		if err != nil {
 			p.API.LogDebug("complete oauth, error posting meeting", "error", err.Error())
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -226,7 +226,7 @@ type startMeetingRequest struct {
 	MeetingID int    `json:"meeting_id"`
 }
 
-func (p *Plugin) handleStartMeeting(w http.ResponseWriter, r *http.Request) {
+func (p *Plugin) handleStartMeetingWithDeps(w http.ResponseWriter, r *http.Request, newClient ClientFactory) {
 	userID := r.Header.Get("Mattermost-User-Id")
 	if userID == "" {
 		p.API.LogError("handleStartMeeting, unauthorized user")
@@ -275,7 +275,7 @@ func (p *Plugin) handleStartMeeting(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	_, authErr := p.authenticateAndFetchUser(userID, req.ChannelID)
+	authResult, authErr := p.authenticateAndFetchUser(userID, req.ChannelID, newClient)
 	if authErr != nil {
 		if _, err = w.Write([]byte(`{"meeting_url": ""}`)); err != nil {
 			p.API.LogWarn("failed to write response", "error", err.Error())
@@ -295,7 +295,7 @@ func (p *Plugin) handleStartMeeting(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, meeting, err := p.postMeeting(user, req.ChannelID, req.Topic)
+	_, meeting, err := p.postMeetingWithDeps(user, req.ChannelID, req.Topic, authResult.Client, authResult.UserInfo)
 	if err != nil {
 		p.API.LogError("handleStartMeeting, failed to post meeting", "UserID", user.Id, "Error", err.Error())
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -311,4 +311,8 @@ func (p *Plugin) handleStartMeeting(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		p.API.LogWarn("failed to write response", "error", err.Error())
 	}
+}
+
+func (p *Plugin) handleStartMeeting(w http.ResponseWriter, r *http.Request) {
+	p.handleStartMeetingWithDeps(w, r, p.NewClient)
 }

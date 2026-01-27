@@ -11,12 +11,7 @@ import (
 	msgraph "github.com/yaegashi/msgraph.go/beta"
 )
 
-func (p *Plugin) postMeeting(creator *model.User, channelID string, topic string) (*model.Post, *msgraph.OnlineMeeting, error) {
-	userInfo, err := p.GetUserInfo(creator.Id)
-	if err != nil {
-		return nil, nil, err
-	}
-
+func (p *Plugin) postMeetingWithDeps(creator *model.User, channelID string, topic string, client ClientInterface, userInfo *UserInfo) (*model.Post, *msgraph.OnlineMeeting, error) {
 	if !p.API.HasPermissionToChannel(creator.Id, channelID, model.PermissionCreatePost) {
 		return nil, nil, errors.New("cannot create post in this channel")
 	}
@@ -38,8 +33,7 @@ func (p *Plugin) postMeeting(creator *model.User, channelID string, topic string
 			return nil, nil, errors.New("returned members is nil")
 		}
 		for _, member := range members {
-			var attendeeInfo *UserInfo
-			attendeeInfo, err = p.GetUserInfo(member.UserId)
+			attendeeInfo, err := p.GetUserInfo(member.UserId)
 			if err != nil {
 				continue
 			}
@@ -47,7 +41,7 @@ func (p *Plugin) postMeeting(creator *model.User, channelID string, topic string
 		}
 	}
 
-	meeting, err := p.client.CreateMeeting(userInfo, attendees, topic)
+	meeting, err := client.CreateMeeting(userInfo, attendees, topic)
 	if err != nil {
 		return nil, nil, err
 	}

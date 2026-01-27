@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	msgraph "github.com/yaegashi/msgraph.go/beta"
+	"golang.org/x/oauth2"
 
 	"github.com/mattermost/mattermost/server/public/model"
 	"github.com/mattermost/mattermost/server/public/plugin"
@@ -54,6 +55,13 @@ func (m *MockClient) CreateMeeting(_ *UserInfo, _ []*UserInfo, _ string) (*msgra
 	return args.Get(0).(*msgraph.OnlineMeeting), args.Error(1)
 }
 
+// mockClientFactory returns a ClientFactory that always returns the given mock client
+func mockClientFactory(mockClient *MockClient) ClientFactory {
+	return func(_ *oauth2.Config, _ *oauth2.Token) ClientInterface {
+		return mockClient
+	}
+}
+
 func TestHandleConnect(t *testing.T) {
 	tests := []struct {
 		name           string
@@ -82,6 +90,7 @@ func TestHandleConnect(t *testing.T) {
 				api.On("KVSet", "msteamsmeetinguserstate_demoUserID", []byte("msteamsmeetinguserstate_demoUserID_demoChannelID_true")).Return(nil)
 				api.On("GetConfig").Return(&model.Config{ServiceSettings: model.ServiceSettings{SiteURL: model.NewPointer("https://example.com")}})
 				mockClient.On("GetMe").Return(&msgraph.User{}, errors.New("error getting user details"))
+				api.On("LogError", "authenticateAndFetchUser, cannot get user", "error", "error getting user details").Return()
 			},
 			expectedOutput: "",
 			expectError:    true,
@@ -110,7 +119,6 @@ func TestHandleConnect(t *testing.T) {
 				MattermostPlugin: plugin.MattermostPlugin{
 					API: api,
 				},
-				client: mockClient,
 			}
 
 			p.setConfiguration(&configuration{
@@ -132,7 +140,7 @@ func TestHandleConnect(t *testing.T) {
 
 			tt.mockSetup(api, encryptedUserInfo, mockClient)
 
-			resp, err := p.handleConnect(tt.args, tt.commandArgs)
+			resp, err := p.handleConnectWithDeps(tt.args, tt.commandArgs, mockClientFactory(mockClient))
 			if tt.expectError {
 				require.ErrorContains(t, err, tt.expectedError)
 			} else {
@@ -141,6 +149,7 @@ func TestHandleConnect(t *testing.T) {
 			}
 
 			api.AssertExpectations(t)
+			mockClient.AssertExpectations(t)
 		})
 	}
 }
@@ -369,7 +378,6 @@ func TestHandleStart(t *testing.T) {
 					API: api,
 				},
 				tracker: mockTracker,
-				client:  mockClient,
 			}
 
 			p.setConfiguration(&configuration{
@@ -388,7 +396,7 @@ func TestHandleStart(t *testing.T) {
 
 			tt.mockSetup(api, encryptedUserInfo, mockTracker, mockClient)
 
-			resp, err := p.handleStart(tt.args, tt.commandArgs)
+			resp, err := p.handleStartWithDeps(tt.args, tt.commandArgs, mockClientFactory(mockClient))
 			if tt.expectError {
 				require.ErrorContains(t, err, tt.expectedError)
 			} else {
@@ -398,6 +406,7 @@ func TestHandleStart(t *testing.T) {
 
 			api.AssertExpectations(t)
 			mockTracker.AssertExpectations(t)
+			mockClient.AssertExpectations(t)
 		})
 	}
 }

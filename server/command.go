@@ -108,7 +108,7 @@ func (p *Plugin) handleHelp() (string, error) {
 	return p.getHelpText(), nil
 }
 
-func (p *Plugin) handleStart(args []string, extra *model.CommandArgs) (string, error) {
+func (p *Plugin) handleStartWithDeps(args []string, extra *model.CommandArgs, newClient ClientFactory) (string, error) {
 	topic := ""
 	if len(args) > 1 {
 		topic = strings.Join(args[1:], " ")
@@ -134,7 +134,7 @@ func (p *Plugin) handleStart(args []string, extra *model.CommandArgs) (string, e
 		return "", nil
 	}
 
-	_, authErr := p.authenticateAndFetchUser(userID, extra.ChannelId)
+	authResult, authErr := p.authenticateAndFetchUser(userID, extra.ChannelId, newClient)
 	if authErr != nil {
 		// the user state will be needed later while connecting the user to MS teams meeting via OAuth
 		if _, err := p.StoreState(userID, extra.ChannelId, false); err != nil {
@@ -144,7 +144,7 @@ func (p *Plugin) handleStart(args []string, extra *model.CommandArgs) (string, e
 		return authErr.Message, authErr.Err
 	}
 
-	_, _, err := p.postMeeting(user, extra.ChannelId, topic)
+	_, _, err := p.postMeetingWithDeps(user, extra.ChannelId, topic, authResult.Client, authResult.UserInfo)
 	if err != nil {
 		return "Failed to post message. Please try again.", errors.Wrap(err, "cannot post message")
 	}
@@ -153,12 +153,16 @@ func (p *Plugin) handleStart(args []string, extra *model.CommandArgs) (string, e
 	return "", nil
 }
 
-func (p *Plugin) handleConnect(args []string, extra *model.CommandArgs) (string, error) {
+func (p *Plugin) handleStart(args []string, extra *model.CommandArgs) (string, error) {
+	return p.handleStartWithDeps(args, extra, p.NewClient)
+}
+
+func (p *Plugin) handleConnectWithDeps(args []string, extra *model.CommandArgs, newClient ClientFactory) (string, error) {
 	if len(args) > 1 {
 		return tooManyParametersText, nil
 	}
 
-	msUser, authErr := p.authenticateAndFetchUser(extra.UserId, extra.ChannelId)
+	authResult, authErr := p.authenticateAndFetchUser(extra.UserId, extra.ChannelId, newClient)
 	if authErr != nil {
 		// the user state will be needed later while connecting the user to MS teams meeting via OAuth
 		if _, err := p.StoreState(extra.UserId, extra.ChannelId, true); err != nil {
@@ -168,11 +172,15 @@ func (p *Plugin) handleConnect(args []string, extra *model.CommandArgs) (string,
 		return authErr.Message, authErr.Err
 	}
 
-	if msUser != nil {
+	if authResult.User != nil {
 		return "User already connected to MS Teams Meetings", nil
 	}
 
 	return "", nil
+}
+
+func (p *Plugin) handleConnect(args []string, extra *model.CommandArgs) (string, error) {
+	return p.handleConnectWithDeps(args, extra, p.NewClient)
 }
 
 func (p *Plugin) handleDisconnect(args []string, extra *model.CommandArgs) (string, error) {
