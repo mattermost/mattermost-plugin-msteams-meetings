@@ -1,7 +1,7 @@
 {
     "id": "com.mattermost.msteamsmeetings",
     "name": "MS Teams Meetings",
-    "description": "MS Teams Meetings audio and video conferencing plugin for Mattermost 8.1+.",
+    "description": "MS Teams Meetings audio and video conferencing plugin for Mattermost 10.7+.",
     "homepage_url": "https://mattermost.com/pl/mattermost-plugin-msteams-meetings",
     "support_url": "https://github.com/mattermost/mattermost-plugin-msteams-meetings/issues",
     "icon_path": "assets/profile.svg",
