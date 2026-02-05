@@ -132,7 +132,7 @@ describe('PostTypeMSTMeetings', () => {
 
     describe('handleForceStart', () => {
         it('calls startMeeting with currentChannelId, true (force), and meeting_topic when CREATE NEW MEETING is clicked', async () => {
-            const startMeeting = jest.fn()
+            const startMeeting = jest.fn();
             const post: Post = {
                 ...basePost,
                 props: {
