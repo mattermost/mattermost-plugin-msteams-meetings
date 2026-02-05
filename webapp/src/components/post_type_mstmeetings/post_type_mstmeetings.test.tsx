@@ -26,13 +26,14 @@ const basePost: Post = {
     user_id: 'user-id',
     channel_id: 'channel-id',
     root_id: '',
-    parent_id: '',
     original_id: '',
     message: '',
-    type: 'custom_mstmeetings',
+    type: '' as Post['type'],
     props: {},
     hashtags: '',
     pending_post_id: '',
+    reply_count: 0,
+    metadata: {embeds: [], emojis: [], files: [], images: {}},
 };
 
 function renderComponent(props: Partial<React.ComponentProps<typeof PostTypeMSTMeetings>>) {
@@ -43,7 +44,7 @@ function renderComponent(props: Partial<React.ComponentProps<typeof PostTypeMSTM
         currentChannelId: 'channel-123',
         fromBot: false,
         actions: {
-            startMeeting: jest.fn().mockResolvedValue(),
+            startMeeting: jest.fn(),
         },
     };
     const merged = {...defaultProps, ...props};
@@ -131,7 +132,7 @@ describe('PostTypeMSTMeetings', () => {
 
     describe('handleForceStart', () => {
         it('calls startMeeting with currentChannelId, true (force), and meeting_topic when CREATE NEW MEETING is clicked', async () => {
-            const startMeeting = jest.fn().mockResolvedValue();
+            const startMeeting = jest.fn()
             const post: Post = {
                 ...basePost,
                 props: {
