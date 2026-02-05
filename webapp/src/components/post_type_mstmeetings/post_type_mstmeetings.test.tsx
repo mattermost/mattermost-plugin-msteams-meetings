@@ -1,8 +1,6 @@
 // Copyright (c) 2020-present Mattermost, Inc. All Rights Reserved.
 // See LICENSE.txt for license information.
 
-/* eslint-disable max-nested-callbacks */
-
 import React from 'react';
 import {IntlProvider} from 'react-intl';
 
