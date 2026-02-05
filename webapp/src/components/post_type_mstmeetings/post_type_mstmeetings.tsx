@@ -54,6 +54,7 @@ export default function PostTypeMSTMeetings(props: Props) {
                 rel='noopener noreferrer'
                 target='_blank'
                 href={postProps?.meeting_link as string}
+                data-testid='mstmeetings-join-meeting'
             >
                 <i style={style.buttonIcon}>
                     <Icon/>
@@ -73,6 +74,7 @@ export default function PostTypeMSTMeetings(props: Props) {
                         style={style.button}
                         rel='noopener noreferrer'
                         onClick={handleForceStart}
+                        data-testid='mstmeetings-create-new-meeting'
                     >
                         {'CREATE NEW MEETING'}
                     </a>
@@ -84,6 +86,7 @@ export default function PostTypeMSTMeetings(props: Props) {
                         rel='noopener noreferrer'
                         target='_blank'
                         href={postProps?.meeting_link as string}
+                        data-testid='mstmeetings-join-existing-meeting'
                     >
                         <i style={style.buttonIcon}>
                             <Icon/>
@@ -102,7 +105,10 @@ export default function PostTypeMSTMeetings(props: Props) {
 
     return (
         <div className='attachment attachment--pretext'>
-            <div className='attachment__thumb-pretext'>
+            <div
+                className='attachment__thumb-pretext'
+                data-testid='mstmeetings-pretext'
+            >
                 {preText}
             </div>
             <div className='attachment__content'>
@@ -110,10 +116,15 @@ export default function PostTypeMSTMeetings(props: Props) {
                     <h5
                         className='mt-1'
                         style={style.title}
+                        data-testid='mstmeetings-title'
                     >
                         {title}
                     </h5>
-                    {subtitle}
+                    {subtitle ? (
+                        <div data-testid='mstmeetings-subtitle'>
+                            {subtitle}
+                        </div>
+                    ) : null}
                     <div>
                         <div style={style.body}>
                             {content}
