@@ -36,7 +36,10 @@
     "beforeEach": true
   },
   "settings": {
-    "import/resolver": "webpack"
+    "import/resolver": "webpack",
+    "react": {
+      "version": "detect"
+    }
   },
   "rules": {
     "array-bracket-spacing": [
@@ -662,6 +665,12 @@
             "extensions": [".jsx", ".tsx"]
           }
         ]
+      }
+    },
+    {
+      "files": ["**/*.test.ts", "**/*.test.tsx", "**/*.spec.ts", "**/*.spec.tsx", "**/tests/**/*.ts", "**/tests/**/*.tsx"],
+      "rules": {
+        "max-nested-callbacks": 0
       }
     }
   ]
