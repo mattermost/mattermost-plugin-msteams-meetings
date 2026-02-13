@@ -6,6 +6,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 
@@ -234,9 +235,18 @@ func (p *Plugin) handleStartMeetingWithDeps(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
+	const maxRequestBodySize = 1 * 1024 * 1024 // 1MB
+	r.Body = http.MaxBytesReader(w, r.Body, maxRequestBodySize)
+
 	var req startMeetingRequest
 	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
+		var maxBytesErr *http.MaxBytesError
+		if errors.As(err, &maxBytesErr) {
+			p.API.LogWarn("handleStartMeeting, request body too large", "UserID", userID)
+			http.Error(w, "Request payload exceeds maximum size limit", http.StatusRequestEntityTooLarge)
+			return
+		}
 		p.API.LogError("handleStartMeeting, failed to decode start meeting payload", "Error", err.Error())
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return

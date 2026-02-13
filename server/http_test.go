@@ -206,6 +206,16 @@ func TestHandleStartMeeting(t *testing.T) {
 			},
 		},
 		{
+			name:           "Request Body Too Large",
+			userID:         "testUserID",
+			channelID:      "testChannelID",
+			expectedStatus: http.StatusRequestEntityTooLarge,
+			expectedBody:   "Request payload exceeds maximum size limit\n",
+			setup: func() {
+				api.On("LogWarn", "handleStartMeeting, request body too large", "UserID", "testUserID").Return(nil)
+			},
+		},
+		{
 			name:           "Error Getting User",
 			userID:         "testUserID",
 			channelID:      "testChannelID",
@@ -367,9 +377,16 @@ func TestHandleStartMeeting(t *testing.T) {
 			tc.setup()
 
 			var reqBody []byte
-			if tc.name == "Invalid Request Body" {
+			switch tc.name {
+			case "Invalid Request Body":
 				reqBody = []byte("invalid-json-body")
-			} else {
+			case "Request Body Too Large":
+				largePayload := startMeetingRequest{
+					ChannelID: tc.channelID,
+					Topic:     string(bytes.Repeat([]byte("a"), 1*1024*1024)),
+				}
+				reqBody, _ = json.Marshal(&largePayload)
+			default:
 				reqBody, _ = json.Marshal(&startMeetingRequest{
 					ChannelID: tc.channelID,
 					Personal:  false,
