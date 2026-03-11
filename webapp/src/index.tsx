@@ -16,6 +16,21 @@ import Client from './client';
 // eslint-disable-next-line import/no-unresolved
 import {PluginRegistry} from './types/mattermost-webapp';
 
+function getServerRoute(state: GlobalState) {
+    const config = getConfig(state);
+
+    let basePath = '';
+    if (config && config.SiteURL) {
+        basePath = new URL(config.SiteURL).pathname;
+
+        if (basePath && basePath[basePath.length - 1] === '/') {
+            basePath = basePath.substr(0, basePath.length - 1);
+        }
+    }
+
+    return basePath;
+}
+
 class Plugin {
     public async initialize(registry: PluginRegistry, store: Store<GlobalState, Action<Record<string, unknown>>>) {
         const helpText = 'Start MS Teams Meeting';
@@ -51,18 +66,3 @@ declare global {
 }
 
 window.registerPlugin(pluginId, new Plugin());
-
-const getServerRoute = (state: GlobalState) => {
-    const config = getConfig(state);
-
-    let basePath = '';
-    if (config && config.SiteURL) {
-        basePath = new URL(config.SiteURL).pathname;
-
-        if (basePath && basePath[basePath.length - 1] === '/') {
-            basePath = basePath.substr(0, basePath.length - 1);
-        }
-    }
-
-    return basePath;
-};
