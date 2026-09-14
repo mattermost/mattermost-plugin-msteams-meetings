@@ -40,7 +40,7 @@ export default function PostTypeMSTMeetings(props: Props) {
     };
 
     let preText = '';
-    let content: JSX.Element | undefined;
+    let content: React.JSX.Element | undefined;
     let subtitle = '';
     if (postProps.meeting_status === 'STARTED') {
         preText = 'I have started a meeting';
@@ -135,11 +135,6 @@ export default function PostTypeMSTMeetings(props: Props) {
         </div>
     );
 }
-
-PostTypeMSTMeetings.defaultProps = {
-    compactDisplay: false,
-    isRHS: false,
-};
 
 const getStyle = makeStyleFromTheme((theme) => {
     return {

@@ -26,7 +26,6 @@ module.exports = (api) => {
                 allExtensions: true,
                 isTSX: true,
             }],
-            ['@emotion/babel-preset-css-prop'],
         ],
         plugins: [
             '@babel/plugin-transform-class-properties',

@@ -2,7 +2,7 @@
 // See LICENSE.txt for license information.
 
 import React from 'react';
-import {Store, Action} from 'redux';
+import {Store} from 'redux';
 
 import {Channel} from '@mattermost/types/channels';
 import {GlobalState} from '@mattermost/types/store';
@@ -32,7 +32,7 @@ function getServerRoute(state: GlobalState) {
 }
 
 class Plugin {
-    public async initialize(registry: PluginRegistry, store: Store<GlobalState, Action<Record<string, unknown>>>) {
+    public async initialize(registry: PluginRegistry, store: Store<GlobalState>) {
         const helpText = 'Start MS Teams Meeting';
 
         let creatingMeeting = false;
