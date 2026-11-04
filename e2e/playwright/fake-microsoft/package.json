@@ -1,0 +1,5 @@
+{
+  "name": "fake-microsoft",
+  "private": true,
+  "type": "module"
+}
