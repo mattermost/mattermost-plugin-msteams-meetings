@@ -11,13 +11,12 @@ import './env';
 import type {Client4} from '@mattermost/client';
 import {testConfig} from '@mattermost/playwright-lib';
 
-import {ensureMember, isDisposableServer, loginAdmin, loginMember, MEMBER1, MEMBER2} from './admin';
+import {ensureMember, loginAdmin, loginMember, MEMBER1, MEMBER2} from './admin';
 import {COMMAND, PLUGIN_ID, TEAM_NAME, TOWN_SQUARE} from './constants';
 import {FAKE_CLIENT_ID, FAKE_CLIENT_SECRET, FAKE_TENANT_ID} from './credentials';
 import {fake} from './fake';
 
 const DIST_DIR = path.resolve(__dirname, '../../../dist');
-const PLAYWRIGHT_LIB_DEFAULT_TEAM = /^ad-1(-[0-9a-f]{7})?$/;
 type PluginSettingValues = Record<string, unknown>;
 
 export function findPluginBundle(): string {
@@ -88,7 +87,6 @@ export async function configurePlugin(client: Client4, clientSecret = FAKE_CLIEN
     });
 }
 
-// ensureTeam keeps a single team so the channel-header buttons render predictably.
 export async function ensureTeam(client: Client4) {
     // Other plugin suites sharing this server archive every team but their own, so restore and rejoin ours.
     const existing = await client.getTeamByName(TEAM_NAME).catch(() => undefined);
@@ -105,22 +103,6 @@ export async function ensureTeam(client: Client4) {
         const me = await client.getMe();
         await client.addToTeam(existing.id, me.id);
     }
-
-    const others = (await client.getMyTeams()).filter((team) => team.name !== TEAM_NAME);
-    if (others.length === 0) {
-        return;
-    }
-
-    // playwright-lib's global setup creates a fresh randomly suffixed ad-1 team on every run, so removing it needs no consent.
-    const protectedTeams = others.filter((team) => !PLAYWRIGHT_LIB_DEFAULT_TEAM.test(team.name));
-
-    // localhost:8065 is also where a developer's own server usually runs, so outside CI deleting needs an explicit opt-in.
-    const mayDelete = process.env.PW_DELETE_OTHER_TEAMS === 'true' || (isDisposableServer() && process.env.CI === 'true');
-    if (protectedTeams.length > 0 && !mayDelete) {
-        throw new Error(`Refusing to delete teams ${protectedTeams.map((team) => team.name).join(', ')} on ${testConfig.baseURL}. ` +
-            'Leave them first, or set PW_DELETE_OTHER_TEAMS=true to allow deleting them on this server.');
-    }
-    await Promise.all(others.map((team) => client.deleteTeam(team.id)));
 }
 
 export async function executeCommand(client: Client4, command: string) {
