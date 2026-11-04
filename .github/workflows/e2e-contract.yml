@@ -1,0 +1,60 @@
+name: e2e-contract
+
+on:
+  schedule:
+    - cron: "0 5 * * *"
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: msteams-e2e-contract
+  cancel-in-progress: false
+
+jobs:
+  contract:
+    name: Fake Microsoft services vs the live tenant
+    # Enable by setting the repository variable MSTEAMS_E2E_CONTRACT_ENABLED to true once the tenant is set up.
+    if: vars.MSTEAMS_E2E_CONTRACT_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    environment: e2e-entra
+    timeout-minutes: 15
+    env:
+      MSTEAMS_E2E_TENANT_ID: ${{ secrets.MSTEAMS_E2E_TENANT_ID }}
+      MSTEAMS_E2E_CLIENT_ID: ${{ secrets.MSTEAMS_E2E_CLIENT_ID }}
+      MSTEAMS_E2E_CLIENT_SECRET: ${{ secrets.MSTEAMS_E2E_CLIENT_SECRET }}
+      MSTEAMS_E2E_USER1_EMAIL: ${{ secrets.MSTEAMS_E2E_USER1_EMAIL }}
+      MSTEAMS_E2E_USER2_EMAIL: ${{ secrets.MSTEAMS_E2E_USER2_EMAIL }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+
+      - name: Set up Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: e2e/playwright/package-lock.json
+
+      - name: Install dependencies
+        run: cd e2e/playwright && npm ci
+
+      - name: Start the fake
+        run: |
+          cd e2e/playwright
+          npm run fake > "$RUNNER_TEMP/fake.log" 2>&1 &
+          for _ in $(seq 1 20); do
+            curl -fs http://127.0.0.1:8080/__control/health && break
+            sleep 1
+          done
+
+      - name: Compare the fake with the live tenant
+        run: cd e2e/playwright && npm run contract:compare
+
+      - name: Show the fake log
+        if: failure()
+        run: cat "$RUNNER_TEMP/fake.log"
