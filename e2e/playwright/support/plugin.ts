@@ -41,9 +41,14 @@ function withReadablePermissions(bundlePath: string): string {
 }
 
 export async function installPlugin(client: Client4, bundlePath: string) {
-    const bytes = fs.readFileSync(withReadablePermissions(bundlePath));
-    const file = new File([bytes], path.basename(bundlePath), {type: 'application/gzip'});
-    await client.uploadPlugin(file, true);
+    const fixed = withReadablePermissions(bundlePath);
+    try {
+        const bytes = fs.readFileSync(fixed);
+        const file = new File([bytes], path.basename(bundlePath), {type: 'application/gzip'});
+        await client.uploadPlugin(file, true);
+    } finally {
+        fs.rmSync(path.dirname(fixed), {recursive: true, force: true});
+    }
 }
 
 export async function restartPlugin(client: Client4) {
@@ -105,9 +110,11 @@ export async function ensureTeam(client: Client4) {
         return;
     }
 
-    if (!isDisposableServer() && process.env.PW_DELETE_OTHER_TEAMS !== 'true') {
+    // localhost:8065 is also where a developer's own server usually runs, so outside CI deleting needs an explicit opt-in.
+    const mayDelete = process.env.PW_DELETE_OTHER_TEAMS === 'true' || (isDisposableServer() && Boolean(process.env.CI));
+    if (!mayDelete) {
         throw new Error(`Refusing to delete teams ${others.map((team) => team.name).join(', ')} on ${testConfig.baseURL}. ` +
-            'Leave them first, or set PW_DELETE_OTHER_TEAMS=true to allow deleting them on this non-disposable server.');
+            'Leave them first, or set PW_DELETE_OTHER_TEAMS=true to allow deleting them on this server.');
     }
     await Promise.all(others.map((team) => client.deleteTeam(team.id)));
 }

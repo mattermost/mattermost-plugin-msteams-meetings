@@ -21,12 +21,6 @@ jobs:
       contents: read
     environment: e2e-entra
     timeout-minutes: 15
-    env:
-      MSTEAMS_E2E_TENANT_ID: ${{ secrets.MSTEAMS_E2E_TENANT_ID }}
-      MSTEAMS_E2E_CLIENT_ID: ${{ secrets.MSTEAMS_E2E_CLIENT_ID }}
-      MSTEAMS_E2E_CLIENT_SECRET: ${{ secrets.MSTEAMS_E2E_CLIENT_SECRET }}
-      MSTEAMS_E2E_USER1_EMAIL: ${{ secrets.MSTEAMS_E2E_USER1_EMAIL }}
-      MSTEAMS_E2E_USER2_EMAIL: ${{ secrets.MSTEAMS_E2E_USER2_EMAIL }}
     steps:
       - name: Checkout
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -48,11 +42,20 @@ jobs:
           cd e2e/playwright
           npm run fake > "$RUNNER_TEMP/fake.log" 2>&1 &
           for _ in $(seq 1 20); do
-            curl -fs http://127.0.0.1:8080/__control/health && break
+            curl -fs http://127.0.0.1:8080/__control/health && exit 0
             sleep 1
           done
+          echo "The fake did not become ready" >&2
+          cat "$RUNNER_TEMP/fake.log"
+          exit 1
 
       - name: Compare the fake with the live tenant
+        env:
+          MSTEAMS_E2E_TENANT_ID: ${{ secrets.MSTEAMS_E2E_TENANT_ID }}
+          MSTEAMS_E2E_CLIENT_ID: ${{ secrets.MSTEAMS_E2E_CLIENT_ID }}
+          MSTEAMS_E2E_CLIENT_SECRET: ${{ secrets.MSTEAMS_E2E_CLIENT_SECRET }}
+          MSTEAMS_E2E_USER1_EMAIL: ${{ secrets.MSTEAMS_E2E_USER1_EMAIL }}
+          MSTEAMS_E2E_USER2_EMAIL: ${{ secrets.MSTEAMS_E2E_USER2_EMAIL }}
         run: cd e2e/playwright && npm run contract:compare
 
       - name: Show the fake log

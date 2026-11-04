@@ -114,7 +114,11 @@ async function runScenarios(target: Target): Promise<Step[]> {
     } finally {
         if (meetingId) {
             const deleted = await call(target, token, 'DELETE', `/users/${user1.body.id}/onlineMeetings/${encodeURIComponent(meetingId)}`);
-            steps.push(check('delete online meeting', deleted.status, undefined, undefined));
+            steps.push({
+                name: 'delete online meeting',
+                status: deleted.status,
+                violations: deleted.status === 204 ? [] : [`expected 204, got ${deleted.status}`],
+            });
         }
     }
 
