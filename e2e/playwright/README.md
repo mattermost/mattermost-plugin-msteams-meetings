@@ -108,7 +108,7 @@ To rotate the secret, create a new one on the app and update `MSTEAMS_E2E_CLIENT
 ## Notes
 
 - With the app bar enabled, Mattermost moves the plugin's channel header button into it. The `channel header button` specs turn the app bar off for their duration and turn it back on afterwards.
-- Do not run the suite against a Mattermost server you care about. Setup installs the plugin, rewrites its settings and, unless the server is `localhost`, refuses to delete other teams.
+- Do not run the suite against a Mattermost server you care about. Setup installs the plugin, rewrites its settings and deletes the admin's other teams. Outside CI it refuses to delete any team except playwright-lib's own `ad-1` unless `PW_DELETE_OTHER_TEAMS=true` is set.
 - The plugin treats an access token as expired 10 seconds before it expires, so the token specs use a 15 second token and wait about 7 seconds.
 - The plugin does not save refreshed tokens, so the fake keeps old refresh tokens valid after rotating them, as Entra does.
 - Beta Graph marks `joinUrl` as deprecated and the plugin dereferences it. The contract check's `create online meeting` step is the one most likely to catch a change.

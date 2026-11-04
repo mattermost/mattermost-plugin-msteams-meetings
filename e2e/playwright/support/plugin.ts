@@ -17,6 +17,7 @@ import {FAKE_CLIENT_ID, FAKE_CLIENT_SECRET, FAKE_TENANT_ID} from './credentials'
 import {fake} from './fake';
 
 const DIST_DIR = path.resolve(__dirname, '../../../dist');
+const PLAYWRIGHT_LIB_DEFAULT_TEAM = 'ad-1';
 type PluginSettingValues = Record<string, unknown>;
 
 export function findPluginBundle(): string {
@@ -110,10 +111,13 @@ export async function ensureTeam(client: Client4) {
         return;
     }
 
+    // playwright-lib's global setup creates this team on every run, so removing it needs no consent.
+    const protectedTeams = others.filter((team) => team.name !== PLAYWRIGHT_LIB_DEFAULT_TEAM);
+
     // localhost:8065 is also where a developer's own server usually runs, so outside CI deleting needs an explicit opt-in.
-    const mayDelete = process.env.PW_DELETE_OTHER_TEAMS === 'true' || (isDisposableServer() && Boolean(process.env.CI));
-    if (!mayDelete) {
-        throw new Error(`Refusing to delete teams ${others.map((team) => team.name).join(', ')} on ${testConfig.baseURL}. ` +
+    const mayDelete = process.env.PW_DELETE_OTHER_TEAMS === 'true' || (isDisposableServer() && process.env.CI === 'true');
+    if (protectedTeams.length > 0 && !mayDelete) {
+        throw new Error(`Refusing to delete teams ${protectedTeams.map((team) => team.name).join(', ')} on ${testConfig.baseURL}. ` +
             'Leave them first, or set PW_DELETE_OTHER_TEAMS=true to allow deleting them on this server.');
     }
     await Promise.all(others.map((team) => client.deleteTeam(team.id)));
