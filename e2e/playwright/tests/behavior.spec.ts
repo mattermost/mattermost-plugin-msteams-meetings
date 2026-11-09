@@ -140,8 +140,6 @@ test('disconnects members when the app settings change', {tag: ['@msteams_plugin
     } finally {
         await configurePlugin(client);
     }
-    await channelsPage.page.waitForTimeout(3_000);
-
-    // * Verify the member has to connect again
-    await runCommandExpecting(channelsPage, `${COMMAND} connect`, CONNECT_REPLY);
+    // * Verify the member has to connect again, once the settings change has propagated
+    await expect(() => runCommandExpecting(channelsPage, `${COMMAND} connect`, CONNECT_REPLY, 2_000)).toPass({timeout: 30_000});
 });

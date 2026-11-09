@@ -72,14 +72,14 @@ export async function runSlashCommand(channelsPage: ChannelsPage, command: strin
 }
 
 // Earlier commands can leave an identical reply on screen, so wait for a new last post.
-export async function runCommandExpecting(channelsPage: ChannelsPage, command: string, reply: string | RegExp) {
+export async function runCommandExpecting(channelsPage: ChannelsPage, command: string, reply: string | RegExp, replyTimeout?: number) {
     const centerView = channelsPage.centerView;
     const before = await centerView.getLastPostID();
     await runSlashCommand(channelsPage, command);
     await expect.poll(() => centerView.getLastPostID()).not.toBe(before);
 
     const post = await centerView.getLastPost();
-    await expect(post.body).toContainText(reply);
+    await expect(post.body).toContainText(reply, {timeout: replyTimeout});
     return post;
 }
 

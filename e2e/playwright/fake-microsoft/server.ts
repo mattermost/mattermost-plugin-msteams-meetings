@@ -345,9 +345,14 @@ function createMeeting(auth: Auth, user: User, body: Json): Result {
     }
 
     validate('createOnlineMeetingRequest', body, 'create online meeting request');
-    if (!body.startDateTime || !body.endDateTime) {
-        return graphError(400, 'BadRequest', 'startDateTime and endDateTime are required.');
+    // Graph defaults missing times to now and an hour later, but rejects unparsable ones.
+    const start = Date.parse(body.startDateTime ?? new Date().toISOString());
+    const end = body.endDateTime === undefined ? start + (60 * 60 * 1000) : Date.parse(body.endDateTime);
+    if (Number.isNaN(start) || Number.isNaN(end)) {
+        return graphError(400, 'BadRequest', 'startDateTime and endDateTime must be valid ISO 8601 date-times.');
     }
+    const startDateTime = body.startDateTime ?? new Date(start).toISOString();
+    const endDateTime = body.endDateTime ?? new Date(end).toISOString();
 
     if (state.failNext) {
         const {status, code, message} = state.failNext;
@@ -361,8 +366,8 @@ function createMeeting(auth: Auth, user: User, body: Json): Result {
         '@odata.context': 'https://graph.microsoft.com/beta/$metadata#users(\'' + user.id + '\')/onlineMeetings/$entity',
         id,
         creationDateTime: new Date().toISOString(),
-        startDateTime: body.startDateTime,
-        endDateTime: body.endDateTime,
+        startDateTime,
+        endDateTime,
         joinUrl,
         joinWebUrl: joinUrl,
         subject: body.subject,

@@ -82,6 +82,7 @@ async function runScenarios(target: Target): Promise<Step[]> {
     steps.push(check('get attendee', user2.status, 'user', user2.body));
 
     let meetingId = '';
+    let unexpectedMeetingId = '';
     try {
         const start = new Date();
         const end = new Date(start.getTime() + (60 * 60 * 1000));
@@ -106,7 +107,11 @@ async function runScenarios(target: Target): Promise<Step[]> {
         const unknown = await call(target, token, 'GET', '/users/00000000-0000-0000-0000-000000000000');
         steps.push(check('error: unknown user', unknown.status, 'graphError', unknown.body));
 
-        const invalid = await call(target, token, 'POST', `/users/${user1.body.id}/onlineMeetings`, {subject: 'missing times'});
+        const invalid = await call(target, token, 'POST', `/users/${user1.body.id}/onlineMeetings`, {
+            startDateTime: 'not-a-date',
+            subject: `[contract-${Date.now().toString(36)}] invalid start time`,
+        });
+        unexpectedMeetingId = invalid.status === 201 ? invalid.body?.id || '' : '';
         steps.push(check('error: invalid meeting body', invalid.status, 'graphError', invalid.body));
         if (target.name === 'fake') {
             await fetch(`${FAKE_URL}/__control/violations`, {method: 'DELETE'});
@@ -119,6 +124,9 @@ async function runScenarios(target: Target): Promise<Step[]> {
                 status: deleted.status,
                 violations: deleted.status === 204 ? [] : [`expected 204, got ${deleted.status}`],
             });
+        }
+        if (unexpectedMeetingId) {
+            await call(target, token, 'DELETE', `/users/${user1.body.id}/onlineMeetings/${encodeURIComponent(unexpectedMeetingId)}`);
         }
     }
 
