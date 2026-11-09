@@ -1,0 +1,22 @@
+{
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": ".."
+  },
+  "user": "ubuntu",
+  "install": "cd webapp && npm ci && cd ../e2e/playwright && npm ci && sudo npx playwright install-deps chromium && npx playwright install chromium && (sudo service docker start && sleep 5 && docker compose pull || true)",
+  "start": "sudo service docker start",
+  "terminals": [
+    {
+      "name": "e2e-server",
+      "command": "make e2e-env-up",
+      "description": "Mattermost for the E2E suite on localhost:8065. Run make e2e once it is healthy."
+    }
+  ],
+  "ports": [
+    {
+      "name": "Mattermost",
+      "port": 8065
+    }
+  ]
+}
