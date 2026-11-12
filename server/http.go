@@ -5,6 +5,7 @@ package main
 
 import (
 	"context"
+	"crypto/subtle"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -71,6 +72,11 @@ func (p *Plugin) connectUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if _, _, _, _, err = p.ParseState(state); err != nil {
+		http.Error(w, "OAuth state expired or missing, please run the connect command again", http.StatusBadRequest)
+		return
+	}
+
 	url := conf.AuthCodeURL(state, oauth2.AccessTypeOffline)
 	http.Redirect(w, r, url, http.StatusFound)
 }
@@ -114,7 +120,13 @@ func (p *Plugin) completeUserOAuth(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if storedState != state {
+	if storedState == "" {
+		p.API.LogError("completeUserOAuth, expired or missing stored state")
+		http.Error(w, "OAuth state expired or missing, please run the connect command again", http.StatusBadRequest)
+		return
+	}
+
+	if subtle.ConstantTimeCompare([]byte(storedState), []byte(state)) != 1 {
 		p.API.LogError("completeUserOAuth, invalid state")
 		http.Error(w, "invalid state", http.StatusBadRequest)
 		return
