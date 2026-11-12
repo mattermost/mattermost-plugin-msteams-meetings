@@ -873,7 +873,7 @@ func TestCompleteUserOAuthStateLifecycle(t *testing.T) {
 		status, body := serveOAuthComplete(p, userID, "replayedAuthCode", state)
 		require.False(t, transport.called, "a replayed state must not exchange another authorization code")
 		require.Equal(t, http.StatusBadRequest, status)
-		require.Equal(t, "invalid state\n", body)
+		require.Equal(t, "OAuth state expired or missing, please run the connect command again\n", body)
 	})
 
 	t.Run("Mismatched state does not consume the stored state", func(t *testing.T) {

@@ -120,7 +120,13 @@ func (p *Plugin) completeUserOAuth(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if storedState == "" || subtle.ConstantTimeCompare([]byte(storedState), []byte(state)) != 1 {
+	if storedState == "" {
+		p.API.LogError("completeUserOAuth, expired or missing stored state")
+		http.Error(w, "OAuth state expired or missing, please run the connect command again", http.StatusBadRequest)
+		return
+	}
+
+	if subtle.ConstantTimeCompare([]byte(storedState), []byte(state)) != 1 {
 		p.API.LogError("completeUserOAuth, invalid state")
 		http.Error(w, "invalid state", http.StatusBadRequest)
 		return
