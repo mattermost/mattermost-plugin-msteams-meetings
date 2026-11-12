@@ -87,7 +87,7 @@ func TestHandleConnect(t *testing.T) {
 			commandArgs: &model.CommandArgs{UserId: "demoUserID", ChannelId: "demoChannelID"},
 			mockSetup: func(api *plugintest.API, encryptedUserInfo []byte, mockClient *MockClient) {
 				api.On("KVGet", "token_demoUserID").Return(encryptedUserInfo, nil)
-				api.On("KVSet", "msteamsmeetinguserstate_demoUserID", []byte("msteamsmeetinguserstate_demoUserID_demoChannelID_true")).Return(nil)
+				expectStoreStateWithExpiry(api, "demoUserID", "demoChannelID", true)
 				api.On("GetConfig").Return(&model.Config{ServiceSettings: model.ServiceSettings{SiteURL: model.NewPointer("https://example.com")}})
 				mockClient.On("GetMe").Return(&msgraph.User{}, errors.New("error getting user details"))
 				api.On("LogError", "authenticateAndFetchUser, cannot get user", "error", "error getting user details").Return()
@@ -113,6 +113,7 @@ func TestHandleConnect(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			api := &plugintest.API{}
+			api.Test(t)
 			mockClient := &MockClient{}
 
 			p := &Plugin{
@@ -326,7 +327,7 @@ func TestHandleStart(t *testing.T) {
 				api.On("GetPostsSince", "demoChannelID", (time.Now().Unix()-30)*1000).Return(postList, nil)
 				api.On("KVGet", "token_demoUserID").Return(nil, &model.AppError{Message: "deletion error"})
 				api.On("GetConfig").Return(&model.Config{ServiceSettings: model.ServiceSettings{SiteURL: model.NewPointer("https://example.com")}})
-				api.On("KVSet", "msteamsmeetinguserstate_demoUserID", []byte("msteamsmeetinguserstate_demoUserID_demoChannelID_false")).Return(nil)
+				expectStoreStateWithExpiry(api, "demoUserID", "demoChannelID", false)
 			},
 			expectError:   true,
 			expectedError: "Your Mattermost account is not connected to any Microsoft Teams account",
@@ -370,6 +371,7 @@ func TestHandleStart(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			api := &plugintest.API{}
+			api.Test(t)
 			mockTracker := &MockTracker{}
 			mockClient := &MockClient{}
 
