@@ -4,22 +4,34 @@
 package main
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 )
 
 const (
 	stateLength                  = 4
 	trueString                   = "true"
 	msteamsMeetingStateKeyPrefix = "msteamsmeetinguserstate"
+
+	oauthStateNonceBytes     = 32
+	oauthStateNonceSeparator = "."
+	oauthStateExpiry         = 10 * time.Minute
 )
 
 func (p *Plugin) StoreState(userID, channelID string, justConnect bool) (string, error) {
-	key := getOAuthUserStateKey(userID)
-	state := fmt.Sprintf("%v_%v_%v", key, channelID, justConnect)
+	nonce, err := generateOAuthStateNonce()
+	if err != nil {
+		return "", err
+	}
 
-	appErr := p.API.KVSet(key, []byte(state))
+	key := getOAuthUserStateKey(userID)
+	state := fmt.Sprintf("%v_%v_%v%v%v", key, channelID, justConnect, oauthStateNonceSeparator, nonce)
+
+	appErr := p.API.KVSetWithExpiry(key, []byte(state), int64(oauthStateExpiry.Seconds()))
 	if appErr != nil {
 		return "", appErr
 	}
@@ -46,7 +58,13 @@ func (p *Plugin) DeleteState(key string) error {
 func (p *Plugin) ParseState(state string) (key, userID, channelID string, justConnect bool, err error) {
 	stateComponents := strings.Split(state, "_")
 
-	if len(stateComponents) != stateLength {
+	if len(stateComponents) != stateLength || stateComponents[0] != msteamsMeetingStateKeyPrefix {
+		p.API.LogDebug("complete oauth, state mismatch", "stateComponents", fmt.Sprintf("%v", stateComponents), "state", state)
+		return "", "", "", false, errors.New("status mismatch")
+	}
+
+	justConnectValue, nonce, found := strings.Cut(stateComponents[3], oauthStateNonceSeparator)
+	if !found || !isValidOAuthStateNonce(nonce) {
 		p.API.LogDebug("complete oauth, state mismatch", "stateComponents", fmt.Sprintf("%v", stateComponents), "state", state)
 		return "", "", "", false, errors.New("status mismatch")
 	}
@@ -54,9 +72,22 @@ func (p *Plugin) ParseState(state string) (key, userID, channelID string, justCo
 	key = fmt.Sprintf("%v_%v", stateComponents[0], stateComponents[1])
 	userID = stateComponents[1]
 	channelID = stateComponents[2]
-	justConnect = stateComponents[3] == trueString
+	justConnect = justConnectValue == trueString
 
 	return key, userID, channelID, justConnect, nil
+}
+
+func isValidOAuthStateNonce(nonce string) bool {
+	decoded, err := hex.DecodeString(nonce)
+	return err == nil && len(decoded) == oauthStateNonceBytes
+}
+
+func generateOAuthStateNonce() (string, error) {
+	nonce := make([]byte, oauthStateNonceBytes)
+	if _, err := rand.Read(nonce); err != nil {
+		return "", fmt.Errorf("failed to generate oauth state nonce: %w", err)
+	}
+	return hex.EncodeToString(nonce), nil
 }
 
 // getOAuthUserStateKey generates and returns the key for storing the OAuth user state in the KV store.

@@ -6,9 +6,11 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -107,9 +109,9 @@ func TestConnectUser(t *testing.T) {
 			userID:              "testUserID",
 			channelID:           "testChannelID",
 			expectedStatus:      http.StatusFound,
-			expectedBody:        "<a href=\"https://login.microsoftonline.com/testOAuth2Authority/oauth2/v2.0/authorize?access_type=offline&amp;client_id=testOAuth2ClientID&amp;redirect_uri=testSiteURL%2Fplugins%2Fcom.mattermost.msteamsmeetings%2Foauth2%2Fcomplete&amp;response_type=code&amp;scope=offline_access+OnlineMeetings.ReadWrite&amp;state=testOAuthState\">Found</a>.\n\n",
+			expectedBody:        "<a href=\"https://login.microsoftonline.com/testOAuth2Authority/oauth2/v2.0/authorize?access_type=offline&amp;client_id=testOAuth2ClientID&amp;redirect_uri=testSiteURL%2Fplugins%2Fcom.mattermost.msteamsmeetings%2Foauth2%2Fcomplete&amp;response_type=code&amp;scope=offline_access+OnlineMeetings.ReadWrite&amp;state=" + wellFormedOAuthState("testUserID", "testChannelID", true) + "\">Found</a>.\n\n",
 			redirectExpected:    true,
-			expectedRedirectURL: "https://login.microsoftonline.com/testOAuth2Authority/oauth2/v2.0/authorize?access_type=offline&client_id=testOAuth2ClientID&redirect_uri=testSiteURL%2Fplugins%2Fcom.mattermost.msteamsmeetings%2Foauth2%2Fcomplete&response_type=code&scope=offline_access+OnlineMeetings.ReadWrite&state=testOAuthState",
+			expectedRedirectURL: "https://login.microsoftonline.com/testOAuth2Authority/oauth2/v2.0/authorize?access_type=offline&client_id=testOAuth2ClientID&redirect_uri=testSiteURL%2Fplugins%2Fcom.mattermost.msteamsmeetings%2Foauth2%2Fcomplete&response_type=code&scope=offline_access+OnlineMeetings.ReadWrite&state=" + wellFormedOAuthState("testUserID", "testChannelID", true),
 			setup: func() {
 				p.setConfiguration(&configuration{
 					OAuth2ClientID:     "testOAuth2ClientID",
@@ -124,8 +126,32 @@ func TestConnectUser(t *testing.T) {
 					},
 				})
 
-				mockState := "testOAuthState"
+				mockState := wellFormedOAuthState("testUserID", "testChannelID", true)
 				api.On("KVGet", getOAuthUserStateKey("testUserID")).Return([]byte(mockState), nil)
+			},
+		},
+		{
+			name:           "Legacy predictable stored state is not handed out",
+			userID:         "testUserID",
+			channelID:      "testChannelID",
+			expectedStatus: http.StatusBadRequest,
+			setup: func() {
+				p.setConfiguration(&configuration{
+					OAuth2ClientID:     "testOAuth2ClientID",
+					OAuth2ClientSecret: "testOAuth2ClientSecret",
+					OAuth2Authority:    "testOAuth2Authority",
+				})
+
+				testSiteURL := "testSiteURL"
+				api.On("GetConfig").Return(&model.Config{
+					ServiceSettings: model.ServiceSettings{
+						SiteURL: &testSiteURL,
+					},
+				})
+
+				legacyState := predictableOAuthState("testUserID", "testChannelID", true)
+				api.On("KVGet", getOAuthUserStateKey("testUserID")).Return([]byte(legacyState), nil)
+				allowAnyLogs(api)
 			},
 		},
 	}
@@ -149,10 +175,14 @@ func TestConnectUser(t *testing.T) {
 			require.NoError(t, err)
 
 			require.Equal(t, tt.expectedStatus, resp.StatusCode)
-			require.Equal(t, tt.expectedBody, string(body))
+			if tt.expectedBody != "" {
+				require.Equal(t, tt.expectedBody, string(body))
+			}
 
 			if tt.redirectExpected {
 				require.Equal(t, tt.expectedRedirectURL, resp.Header.Get("Location"))
+			} else {
+				require.Empty(t, resp.Header.Get("Location"), "no OAuth redirect must be issued")
 			}
 
 			api.AssertExpectations(t)
@@ -507,7 +537,7 @@ func TestCompleteUserOAuth(t *testing.T) {
 			userID:            "testUserID",
 			expectedStatus:    http.StatusBadRequest,
 			expectedBody:      "missing stored state\n",
-			state:             "valid_state_userID_channelID",
+			state:             wellFormedOAuthState("testUserID", "testChannelID", true),
 			authorizationCode: "testAuthCode",
 			setup: func() {
 				p.setConfiguration(&configuration{
@@ -521,7 +551,7 @@ func TestCompleteUserOAuth(t *testing.T) {
 						SiteURL: &siteURL,
 					},
 				})
-				api.On("KVGet", "valid_state").Return(nil, &model.AppError{Message: "error getting state from store"})
+				api.On("KVGet", getOAuthUserStateKey("testUserID")).Return(nil, &model.AppError{Message: "error getting state from store"})
 				api.On("LogError", "completeUserOAuth, missing stored state").Return(nil)
 			},
 		},
@@ -530,7 +560,7 @@ func TestCompleteUserOAuth(t *testing.T) {
 			userID:            "testUserID",
 			expectedStatus:    http.StatusBadRequest,
 			expectedBody:      "invalid state\n",
-			state:             "valid_state_userID_channelID",
+			state:             wellFormedOAuthState("testUserID", "testChannelID", true),
 			authorizationCode: "testAuthCode",
 			setup: func() {
 				p.setConfiguration(&configuration{
@@ -544,7 +574,8 @@ func TestCompleteUserOAuth(t *testing.T) {
 						SiteURL: &siteURL,
 					},
 				})
-				api.On("KVGet", "valid_state").Return([]byte("different_stored_state"), nil)
+				differentStoredState := predictableOAuthState("testUserID", "testChannelID", true) + "." + strings.Repeat("f", len(testOAuthStateNonce))
+				api.On("KVGet", getOAuthUserStateKey("testUserID")).Return([]byte(differentStoredState), nil)
 				api.On("LogError", "completeUserOAuth, invalid state").Return(nil)
 			},
 		},
@@ -553,7 +584,7 @@ func TestCompleteUserOAuth(t *testing.T) {
 			userID:            "testUserID",
 			expectedStatus:    http.StatusUnauthorized,
 			expectedBody:      "Not authorized, incorrect user\n",
-			state:             "valid_state_for_oauth",
+			state:             wellFormedOAuthState("otherUserID", "testChannelID", true),
 			authorizationCode: "testAuthCode",
 			setup: func() {
 				p.setConfiguration(&configuration{
@@ -567,8 +598,8 @@ func TestCompleteUserOAuth(t *testing.T) {
 						SiteURL: &siteURL,
 					},
 				})
-				api.On("KVGet", "valid_state").Return([]byte("valid_state_for_oauth"), nil)
-				api.On("KVDelete", "valid_state").Return(nil)
+				api.On("KVGet", getOAuthUserStateKey("otherUserID")).Return([]byte(wellFormedOAuthState("otherUserID", "testChannelID", true)), nil)
+				api.On("KVDelete", getOAuthUserStateKey("otherUserID")).Return(nil).Maybe()
 				api.On("LogError", "completeUserOAuth, unauthorized user", "UserID", "testUserID").Return(nil)
 			},
 		},
@@ -611,4 +642,268 @@ func TestCompleteUserOAuth(t *testing.T) {
 			api.AssertExpectations(t)
 		})
 	}
+}
+
+type recordingTransport struct {
+	called bool
+}
+
+func (rt *recordingTransport) RoundTrip(_ *http.Request) (*http.Response, error) {
+	rt.called = true
+	return nil, errors.New("outbound requests are disabled in tests")
+}
+
+func allowAnyLogs(api *plugintest.API) {
+	for _, method := range []string{"LogError", "LogWarn", "LogInfo", "LogDebug"} {
+		for args := []interface{}{mock.Anything}; len(args) <= 9; args = append(args, mock.Anything, mock.Anything) {
+			api.On(method, args...).Return().Maybe()
+		}
+	}
+}
+
+func TestCompleteUserOAuthRejectsPredictableState(t *testing.T) {
+	const (
+		userID    = "victimUserID"
+		channelID = "victimChannelID"
+	)
+
+	tests := []struct {
+		name             string
+		submittedState   func(storedState string) string
+		expectedStatus   int
+		expectedBody     string
+		expectedExchange bool
+	}{
+		{
+			name: "Forged predictable state is rejected without exchanging the code",
+			submittedState: func(_ string) string {
+				return predictableOAuthState(userID, channelID, true)
+			},
+			expectedStatus:   http.StatusBadRequest,
+			expectedBody:     "invalid state\n",
+			expectedExchange: false,
+		},
+		{
+			name: "Genuine stored state proceeds to code exchange",
+			submittedState: func(storedState string) string {
+				return storedState
+			},
+			expectedStatus:   http.StatusInternalServerError,
+			expectedExchange: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			transport := &recordingTransport{}
+			originalTransport := http.DefaultTransport
+			http.DefaultTransport = transport
+			t.Cleanup(func() { http.DefaultTransport = originalTransport })
+
+			api := &plugintest.API{}
+			api.Test(t)
+			p := SetupMockPlugin(api, nil, nil)
+			p.setConfiguration(&configuration{
+				OAuth2ClientID:     "testOAuth2ClientID",
+				OAuth2ClientSecret: "testOAuth2ClientSecret",
+				OAuth2Authority:    "testOAuth2Authority",
+			})
+
+			allowAnyLogs(api)
+			api.On("GetConfig").Return(&model.Config{
+				ServiceSettings: model.ServiceSettings{SiteURL: model.NewPointer("https://example.com")},
+			}).Maybe()
+
+			var storedState string
+			captureState := func(args mock.Arguments) { storedState = string(args.Get(1).([]byte)) }
+			api.On("KVSet", getOAuthUserStateKey(userID), mock.Anything).Run(captureState).Return(nil).Maybe()
+			api.On("KVSetWithExpiry", getOAuthUserStateKey(userID), mock.Anything, mock.Anything).Run(captureState).Return(nil).Maybe()
+
+			_, err := p.StoreState(userID, channelID, true)
+			require.NoError(t, err)
+			require.NotEmpty(t, storedState)
+
+			api.On("KVGet", getOAuthUserStateKey(userID)).Return([]byte(storedState), nil).Maybe()
+			api.On("KVDelete", getOAuthUserStateKey(userID)).Return(nil).Maybe()
+
+			req := httptest.NewRequest(http.MethodGet, "/oauth2/complete", nil)
+			req.Header.Set("Mattermost-User-ID", userID)
+			q := req.URL.Query()
+			q.Add("code", "attackerAuthCode")
+			q.Add("state", tt.submittedState(storedState))
+			req.URL.RawQuery = q.Encode()
+
+			w := httptest.NewRecorder()
+			p.ServeHTTP(&plugin.Context{}, w, req)
+
+			resp := w.Result()
+			body, err := io.ReadAll(resp.Body)
+			require.NoError(t, err)
+
+			require.Equal(t, tt.expectedExchange, transport.called, "unexpected authorization code exchange behavior")
+			require.Equal(t, tt.expectedStatus, resp.StatusCode)
+			if tt.expectedBody != "" {
+				require.Equal(t, tt.expectedBody, string(body))
+			}
+		})
+	}
+}
+
+func newOAuthCompleteTestPlugin(t *testing.T) (*Plugin, *plugintest.API, *recordingTransport) {
+	t.Helper()
+
+	transport := &recordingTransport{}
+	originalTransport := http.DefaultTransport
+	http.DefaultTransport = transport
+	t.Cleanup(func() { http.DefaultTransport = originalTransport })
+
+	api := &plugintest.API{}
+	api.Test(t)
+	p := SetupMockPlugin(api, nil, nil)
+	p.setConfiguration(&configuration{
+		OAuth2ClientID:     "testOAuth2ClientID",
+		OAuth2ClientSecret: "testOAuth2ClientSecret",
+		OAuth2Authority:    "testOAuth2Authority",
+	})
+
+	allowAnyLogs(api)
+	api.On("GetConfig").Return(&model.Config{
+		ServiceSettings: model.ServiceSettings{SiteURL: model.NewPointer("https://example.com")},
+	}).Maybe()
+
+	return p, api, transport
+}
+
+// fakeStateKV backs the plugin's KV state calls with an in-memory map so the state lifecycle can be observed.
+func fakeStateKV(api *plugintest.API, key string) map[string][]byte {
+	kv := map[string][]byte{}
+	api.On("KVSet", key, mock.Anything).Run(func(args mock.Arguments) {
+		kv[key] = args.Get(1).([]byte)
+	}).Return(nil).Maybe()
+	api.On("KVSetWithExpiry", key, mock.Anything, mock.Anything).Run(func(args mock.Arguments) {
+		kv[key] = args.Get(1).([]byte)
+	}).Return(nil).Maybe()
+	api.On("KVGet", key).Return(func(k string) []byte { return kv[k] }, nil).Maybe()
+	api.On("KVDelete", key).Run(func(args mock.Arguments) {
+		delete(kv, args.String(0))
+	}).Return(nil).Maybe()
+	return kv
+}
+
+func serveOAuthComplete(p *Plugin, authedUserID, code, state string) (int, string) {
+	req := httptest.NewRequest(http.MethodGet, "/oauth2/complete", nil)
+	req.Header.Set("Mattermost-User-ID", authedUserID)
+	q := req.URL.Query()
+	q.Add("code", code)
+	q.Add("state", state)
+	req.URL.RawQuery = q.Encode()
+
+	w := httptest.NewRecorder()
+	p.ServeHTTP(&plugin.Context{}, w, req)
+
+	resp := w.Result()
+	body, _ := io.ReadAll(resp.Body)
+	return resp.StatusCode, string(body)
+}
+
+func TestCompleteUserOAuthRejectsStateWithoutValidNonce(t *testing.T) {
+	const (
+		userID    = "victimUserID"
+		channelID = "victimChannelID"
+	)
+
+	tests := []struct {
+		name  string
+		state string
+	}{
+		{
+			name:  "Legacy predictable state persisted before upgrade",
+			state: predictableOAuthState(userID, channelID, true),
+		},
+		{
+			name:  "Legacy predictable state for start meeting persisted before upgrade",
+			state: predictableOAuthState(userID, channelID, false),
+		},
+		{
+			name:  "State with empty nonce",
+			state: predictableOAuthState(userID, channelID, true) + ".",
+		},
+		{
+			name:  "State with short nonce",
+			state: predictableOAuthState(userID, channelID, true) + ".abc123",
+		},
+		{
+			name:  "State with non-hex nonce",
+			state: predictableOAuthState(userID, channelID, true) + "." + strings.Repeat("z", len(testOAuthStateNonce)),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			p, api, transport := newOAuthCompleteTestPlugin(t)
+			kv := fakeStateKV(api, getOAuthUserStateKey(userID))
+			kv[getOAuthUserStateKey(userID)] = []byte(tt.state)
+
+			status, body := serveOAuthComplete(p, userID, "attackerAuthCode", tt.state)
+
+			require.False(t, transport.called, "the authorization code must not be exchanged for a state without a valid nonce")
+			require.Equal(t, http.StatusBadRequest, status)
+			require.Equal(t, "invalid state\n", body)
+		})
+	}
+}
+
+func TestCompleteUserOAuthStateLifecycle(t *testing.T) {
+	const (
+		userID    = "victimUserID"
+		channelID = "victimChannelID"
+	)
+
+	t.Run("State is single-use", func(t *testing.T) {
+		p, api, transport := newOAuthCompleteTestPlugin(t)
+		fakeStateKV(api, getOAuthUserStateKey(userID))
+
+		state, err := p.StoreState(userID, channelID, true)
+		require.NoError(t, err)
+
+		_, _ = serveOAuthComplete(p, userID, "firstAuthCode", state)
+		require.True(t, transport.called, "the first use of a genuine state must proceed to code exchange")
+
+		transport.called = false
+		status, body := serveOAuthComplete(p, userID, "replayedAuthCode", state)
+		require.False(t, transport.called, "a replayed state must not exchange another authorization code")
+		require.Equal(t, http.StatusBadRequest, status)
+		require.Equal(t, "OAuth state expired or missing, please run the connect command again\n", body)
+	})
+
+	t.Run("Mismatched state does not consume the stored state", func(t *testing.T) {
+		p, api, transport := newOAuthCompleteTestPlugin(t)
+		kv := fakeStateKV(api, getOAuthUserStateKey(userID))
+
+		state, err := p.StoreState(userID, channelID, true)
+		require.NoError(t, err)
+
+		forged := predictableOAuthState(userID, channelID, true) + "." + strings.Repeat("f", len(testOAuthStateNonce))
+		require.NotEqual(t, state, forged)
+
+		status, _ := serveOAuthComplete(p, userID, "attackerAuthCode", forged)
+		require.False(t, transport.called)
+		require.Equal(t, http.StatusBadRequest, status)
+		require.Equal(t, state, string(kv[getOAuthUserStateKey(userID)]), "a forged state must not delete the user's pending state")
+
+		_, _ = serveOAuthComplete(p, userID, "victimAuthCode", state)
+		require.True(t, transport.called, "the genuine state must still be usable after a forged attempt")
+	})
+
+	t.Run("State of another user is rejected before code exchange", func(t *testing.T) {
+		p, api, transport := newOAuthCompleteTestPlugin(t)
+		fakeStateKV(api, getOAuthUserStateKey(userID))
+
+		state, err := p.StoreState(userID, channelID, true)
+		require.NoError(t, err)
+
+		status, _ := serveOAuthComplete(p, "attackerUserID", "attackerAuthCode", state)
+		require.False(t, transport.called, "the code must not be exchanged when the state belongs to another user")
+		require.Equal(t, http.StatusUnauthorized, status)
+	})
 }
