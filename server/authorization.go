@@ -10,7 +10,6 @@ import (
 
 	msgraph "github.com/yaegashi/msgraph.go/beta"
 	"golang.org/x/oauth2"
-	"golang.org/x/oauth2/microsoft"
 )
 
 type authError struct {
@@ -96,6 +95,6 @@ func (p *Plugin) getOAuthConfig() (*oauth2.Config, error) {
 			"offline_access",
 			"OnlineMeetings.ReadWrite",
 		},
-		Endpoint: microsoft.AzureADEndpoint(clientAuthority),
+		Endpoint: loginEndpoint(clientAuthority, config.OAuth2TenantType),
 	}, nil
 }

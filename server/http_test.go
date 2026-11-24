@@ -128,6 +128,33 @@ func TestConnectUser(t *testing.T) {
 				api.On("KVGet", getOAuthUserStateKey("testUserID")).Return([]byte(mockState), nil)
 			},
 		},
+		{
+			name:                "Successful OAuth Redirect, GCC High tenant",
+			userID:              "testUserID",
+			channelID:           "testChannelID",
+			expectedStatus:      http.StatusFound,
+			expectedBody:        "<a href=\"https://login.microsoftonline.us/testOAuth2Authority/oauth2/v2.0/authorize?access_type=offline&amp;client_id=testOAuth2ClientID&amp;redirect_uri=testSiteURL%2Fplugins%2Fcom.mattermost.msteamsmeetings%2Foauth2%2Fcomplete&amp;response_type=code&amp;scope=offline_access+OnlineMeetings.ReadWrite&amp;state=testOAuthState\">Found</a>.\n\n",
+			redirectExpected:    true,
+			expectedRedirectURL: "https://login.microsoftonline.us/testOAuth2Authority/oauth2/v2.0/authorize?access_type=offline&client_id=testOAuth2ClientID&redirect_uri=testSiteURL%2Fplugins%2Fcom.mattermost.msteamsmeetings%2Foauth2%2Fcomplete&response_type=code&scope=offline_access+OnlineMeetings.ReadWrite&state=testOAuthState",
+			setup: func() {
+				p.setConfiguration(&configuration{
+					OAuth2TenantType:   TenantTypeGCCHigh,
+					OAuth2ClientID:     "testOAuth2ClientID",
+					OAuth2ClientSecret: "testOAuth2ClientSecret",
+					OAuth2Authority:    "testOAuth2Authority",
+				})
+
+				testSiteURL := "testSiteURL"
+				api.On("GetConfig").Return(&model.Config{
+					ServiceSettings: model.ServiceSettings{
+						SiteURL: &testSiteURL,
+					},
+				})
+
+				mockState := "testOAuthState"
+				api.On("KVGet", getOAuthUserStateKey("testUserID")).Return([]byte(mockState), nil)
+			},
+		},
 	}
 
 	for _, tt := range tests {

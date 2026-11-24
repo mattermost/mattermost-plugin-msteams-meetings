@@ -29,8 +29,10 @@ type Client struct {
 func (p *Plugin) NewClient(conf *oauth2.Config, token *oauth2.Token) ClientInterface {
 	ctx := context.Background()
 	httpClient := conf.Client(ctx, token)
+	builder := msgraph.NewClient(httpClient)
+	builder.SetURL(graphBaseURL(p.getConfiguration().OAuth2TenantType))
 	return &Client{
-		builder: msgraph.NewClient(httpClient),
+		builder: builder,
 		api:     p.API,
 	}
 }
