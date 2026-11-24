@@ -46,7 +46,7 @@ func (c *configuration) ToMap() (map[string]interface{}, error) {
 }
 
 func (c *configuration) differsOAuth2(other *configuration) bool {
-	return c.OAuth2TenantType != other.OAuth2TenantType ||
+	return normalizeTenantType(c.OAuth2TenantType) != normalizeTenantType(other.OAuth2TenantType) ||
 		c.OAuth2Authority != other.OAuth2Authority ||
 		c.OAuth2ClientID != other.OAuth2ClientID ||
 		c.OAuth2ClientSecret != other.OAuth2ClientSecret ||

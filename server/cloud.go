@@ -44,6 +44,15 @@ func validateTenantType(tenantType string) error {
 	return nil
 }
 
+// normalizeTenantType maps the empty value to commercial, so values that select the same cloud
+// compare equal. Other values are returned unchanged.
+func normalizeTenantType(tenantType string) string {
+	if tenantType == "" {
+		return TenantTypeCommercial
+	}
+	return tenantType
+}
+
 func getCloudEndpoints(tenantType string) cloudEndpoints {
 	if endpoints, ok := cloudEndpointsByTenantType[tenantType]; ok {
 		return endpoints
