@@ -74,8 +74,8 @@ func TestLoginEndpointCommercialMatchesAzureADEndpoint(t *testing.T) {
 func TestGraphBaseURL(t *testing.T) {
 	assert.Equal(t, "https://graph.microsoft.com/beta", graphBaseURL(""))
 	assert.Equal(t, "https://graph.microsoft.com/beta", graphBaseURL(TenantTypeCommercial))
-	assert.Equal(t, "https://graph.microsoft.us/beta", graphBaseURL(TenantTypeGCCHigh))
-	assert.Equal(t, "https://dod-graph.microsoft.us/beta", graphBaseURL(TenantTypeDoD))
+	assert.Equal(t, "https://graph.microsoft.us/v1.0", graphBaseURL(TenantTypeGCCHigh))
+	assert.Equal(t, "https://dod-graph.microsoft.us/v1.0", graphBaseURL(TenantTypeDoD))
 }
 
 func TestValidateTenantType(t *testing.T) {

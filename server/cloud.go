@@ -66,7 +66,16 @@ func loginEndpoint(tenant, tenantType string) oauth2.Endpoint {
 	}
 }
 
-// graphBaseURL returns the Microsoft Graph beta API base URL for the given cloud.
+// graphBaseURL returns the Microsoft Graph API base URL for the given cloud.
+//
+// The commercial cloud keeps using the beta API, as the plugin always has. The US Government
+// clouds use v1.0: their beta endpoint does not route onlineMeetings, and a POST to
+// /beta/users/{id}/onlineMeetings fails there with "405 Specified HTTP method is not allowed
+// for the request target", while /v1.0/users/{id}/onlineMeetings works.
 func graphBaseURL(tenantType string) string {
-	return getCloudEndpoints(tenantType).graphHost + "/beta"
+	endpoints := getCloudEndpoints(tenantType)
+	if endpoints == cloudEndpointsByTenantType[TenantTypeCommercial] {
+		return endpoints.graphHost + "/beta"
+	}
+	return endpoints.graphHost + "/v1.0"
 }
