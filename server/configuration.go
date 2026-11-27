@@ -24,6 +24,7 @@ import (
 // If you add non-reference types to your configuration struct, be sure to rewrite Clone as a deep
 // copy appropriate for your types.
 type configuration struct {
+	OAuth2TenantType   string `json:"oauth2tenanttype"`
 	OAuth2Authority    string `json:"oauth2authority"`
 	OAuth2ClientID     string `json:"oauth2clientid"`
 	OAuth2ClientSecret string `json:"oauth2clientsecret"`
@@ -45,7 +46,8 @@ func (c *configuration) ToMap() (map[string]interface{}, error) {
 }
 
 func (c *configuration) differsOAuth2(other *configuration) bool {
-	return c.OAuth2Authority != other.OAuth2Authority ||
+	return normalizeTenantType(c.OAuth2TenantType) != normalizeTenantType(other.OAuth2TenantType) ||
+		c.OAuth2Authority != other.OAuth2Authority ||
 		c.OAuth2ClientID != other.OAuth2ClientID ||
 		c.OAuth2ClientSecret != other.OAuth2ClientSecret ||
 		c.EncryptionKey != other.EncryptionKey
@@ -71,7 +73,7 @@ func (c *configuration) IsValid() error {
 		return errors.New("OAuth2Authority is not configured")
 	}
 
-	return nil
+	return validateTenantType(c.OAuth2TenantType)
 }
 
 // getConfiguration retrieves the active configuration under lock, making it safe to use

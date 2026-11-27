@@ -47,11 +47,24 @@ func (c *Client) CreateMeeting(creator *UserInfo, attendeesIDs []*UserInfo, subj
 			Attendees: attendees,
 		},
 	}
-	out := msgraph.OnlineMeeting{}
+	// The beta API returns the join link as joinUrl; v1.0 (used for the US Government clouds)
+	// returns it as joinWebUrl, which the beta model doesn't have.
+	var out struct {
+		msgraph.OnlineMeeting
+		JoinWebURL *string `json:"joinWebUrl,omitempty"`
+	}
 
 	err := c.builder.Users().ID(creator.RemoteID).OnlineMeetings().Request().JSONRequest(ctx, http.MethodPost, "", &in, &out)
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot create meeting")
 	}
-	return &out, nil
+
+	meeting := out.OnlineMeeting
+	if out.JoinWebURL != nil && *out.JoinWebURL != "" {
+		meeting.JoinURL = out.JoinWebURL
+	}
+	if meeting.JoinURL == nil || *meeting.JoinURL == "" {
+		return nil, errors.New("cannot create meeting: the response has no join URL")
+	}
+	return &meeting, nil
 }

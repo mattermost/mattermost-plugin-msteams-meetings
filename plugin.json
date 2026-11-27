@@ -23,6 +23,28 @@
         "footer": "",
         "settings": [
             {
+                "key": "OAuth2TenantType",
+                "display_name": "Microsoft Cloud:",
+                "type": "dropdown",
+                "help_text": "The Microsoft cloud that hosts your Entra ID tenant and Microsoft 365. Choose **Commercial** for the global cloud and for GCC; choose **GCC High** or **DoD** for US Government tenants that sign in at login.microsoftonline.us. Changing this setting disconnects all users.",
+                "placeholder": "",
+                "default": "commercial",
+                "options": [
+                    {
+                        "display_name": "Commercial (includes GCC)",
+                        "value": "commercial"
+                    },
+                    {
+                        "display_name": "GCC High",
+                        "value": "gcch"
+                    },
+                    {
+                        "display_name": "DoD",
+                        "value": "dod"
+                    }
+                ]
+            },
+            {
                 "key": "OAuth2Authority",
                 "display_name": "Azure - Directory (tenant) ID:",
                 "type": "text",
